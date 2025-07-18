@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  couchdb:
+    image: couchdb:3.3
+    container_name: votaciones_couchdb
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD:-votaciones2024}
+      - COUCHDB_SECRET=${COUCHDB_SECRET:-mysecretkey}
+    ports:
+      - "5984:5984"
+    volumes:
+      - couchdb_data:/opt/couchdb/data
+      - ./couchdb/local.ini:/opt/couchdb/etc/local.d/local.ini:ro
+    restart: unless-stopped
+    networks:
+      - votaciones-network
+
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: votaciones_app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_COUCHDB_URL=http://admin:${COUCHDB_PASSWORD:-votaciones2024}@couchdb:5984
+      - REACT_APP_COUCHDB_NAME=votaciones_estudiantiles
+      - REACT_APP_VERSION=1.0.0
+      - REACT_APP_ELECTION_YEAR=2024
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    depends_on:
+      - couchdb
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./package.json:/app/package.json:ro
+      - /app/node_modules
+    restart: unless-stopped
+    networks:
+      - votaciones-network
+    stdin_open: true
+    tty: true
+
+networks:
+  votaciones-network:
+    driver: bridge
+
+volumes:
+  couchdb_data:
+    driver: local

@@ -1,0 +1,37 @@
+services:
+  couchdb:
+    image: couchdb:3.3
+    container_name: votaciones_couchdb_simple
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=votaciones2024
+    ports:
+      - "5984:5984"
+    volumes:
+      - couchdb_data_simple:/opt/couchdb/data
+    restart: unless-stopped
+
+  app:
+    image: node:18-alpine
+    container_name: votaciones_app_simple
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./:/app
+    command: >
+      sh -c "
+      echo 'Instalando dependencias...' &&
+      npm install --legacy-peer-deps &&
+      echo 'Iniciando aplicación...' &&
+      npm start
+      "
+    depends_on:
+      - couchdb
+    restart: unless-stopped
+
+volumes:
+  couchdb_data_simple:
