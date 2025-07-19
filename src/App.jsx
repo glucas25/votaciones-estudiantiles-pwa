@@ -166,12 +166,12 @@ const AppContent = () => {
       <main className="app-main">
         {user.role === 'tutor' && (
           <StudentsProvider>
-            <CandidatesProvider>
-              <TutorPanel />
-            </CandidatesProvider>
+          <CandidatesProvider>
+          <TutorPanel />
+          </CandidatesProvider>
           </StudentsProvider>
         )}
-        {user.role === 'admin' && <AdminPanel user={user} />}
+        {user.role === 'admin' && <AdminDashboard />}  {/* ✅ NUEVA LÍNEA */}
       </main>
     </div>
   );
