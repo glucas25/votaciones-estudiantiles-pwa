@@ -3,13 +3,20 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  server: {
-    host: '0.0.0.0',
-    port: 3000,
-    strictPort: true
+  define: {
+    global: 'globalThis',
   },
-  preview: {
-    host: '0.0.0.0',
-    port: 3000
-  }
+  optimizeDeps: {
+    include: ['pouchdb']  // <-- Cambié pouchdb-browser por pouchdb
+  },
+  server: {
+    host: true,
+    port: 3000,
+    strictPort: true,
+    open: true,
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+  },
 })

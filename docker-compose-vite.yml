@@ -21,7 +21,10 @@ services:
       NODE_ENV: development
     volumes:
       - .:/app
-    command: sh -c "npm install && npm run dev"
+      - ./src:/app/src
+      - ./public:/app/public
+      - /app/node_modules
+    command: npm run dev
     depends_on:
       - couchdb
     restart: unless-stopped

@@ -1,77 +1,224 @@
-import React, { createContext, useContext, useEffect } from 'react';
-import useAuth from '../hooks/useAuth.jsx';
+// src/contexts/AuthContext.jsx
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
-const AuthContext = createContext(null);
+const AuthContext = createContext();
 
-export const useAuthContext = () => {
-  const context = useContext(AuthContext);
-  
-  if (!context) {
-    throw new Error('useAuthContext debe usarse dentro de AuthProvider');
+// Códigos de activación predefinidos con sus cursos
+const ACTIVATION_CODES = {
+  'ELEC2024-BASICA-ELEM': {
+    level: 'BASICA_ELEMENTAL',
+    name: 'Básica Elemental',
+    courses: ['1ro A', '1ro B', '2do A', '2do B', '3ro A', '3ro B', '4to A', '4to B'],
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-BASICA-MEDIA': {
+    level: 'BASICA_MEDIA',
+    name: 'Básica Media',
+    courses: ['5to A', '5to B', '6to A', '6to B', '7mo A', '7mo B'],
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-BASICA-SUP': {
+    level: 'BASICA_SUPERIOR',
+    name: 'Básica Superior',
+    courses: ['8vo A', '8vo B', '9no A', '9no B', '10mo A', '10mo B'],
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-BACH': {
+    level: 'BACHILLERATO',
+    name: 'Bachillerato',
+    courses: ['1ro Bach A', '1ro Bach B', '2do Bach A', '2do Bach B', '3ro Bach A', '3ro Bach B'],
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
   }
-  
-  return context;
 };
 
 export const AuthProvider = ({ children }) => {
-  const auth = useAuth();
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
-    if (!auth.isAuthenticated) return;
-
-    const renewInterval = setInterval(async () => {
-      console.log('🔄 Auto-renovando sesión...');
-      await auth.renewSession();
-    }, 30 * 60 * 1000);
-
-    return () => clearInterval(renewInterval);
-  }, [auth.isAuthenticated, auth.renewSession]);
-
-  const contextValue = {
-    ...auth,
-    
-    isRole: (role) => {
-      if (!auth.isAuthenticated || !auth.currentTutor) return false;
-      
-      switch (role) {
-        case 'tutor':
-          return true;
-        case 'admin':
-          return false;
-        case 'student':
-          return false;
-        default:
-          return false;
+    // Verificar si hay una sesión guardada
+    const savedSession = localStorage.getItem('voting_session');
+    if (savedSession) {
+      try {
+        const session = JSON.parse(savedSession);
+        // Verificar si la sesión sigue siendo válida
+        if (isValidSession(session)) {
+          setUser(session);
+        } else {
+          localStorage.removeItem('voting_session');
+        }
+      } catch (error) {
+        console.error('Error al cargar sesión guardada:', error);
+        localStorage.removeItem('voting_session');
       }
-    },
+    }
+    setIsLoading(false);
+
+    // Escuchar cambios de conexión
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const isValidSession = (session) => {
+    if (!session || !session.activationCode || !session.course) return false;
     
-    hasPermission: (permission) => {
-      if (!auth.isAuthenticated) return false;
-      
-      switch (permission) {
-        case 'view_students':
-          return true;
-        case 'mark_absent':
-          return true;
-        case 'conduct_voting':
-          return true;
-        case 'export_data':
-          return true;
-        case 'manage_candidates':
-          return false;
-        case 'manage_codes':
-          return false;
-        default:
-          return false;
+    const codeData = ACTIVATION_CODES[session.activationCode];
+    if (!codeData) return false;
+
+    // Verificar si el código está dentro del horario válido
+    const now = new Date();
+    const validFrom = new Date(codeData.validFrom);
+    const validUntil = new Date(codeData.validUntil);
+
+    // Para desarrollo, permitir uso fuera del horario
+    // En producción, descomentar la siguiente línea:
+    // return now >= validFrom && now <= validUntil;
+    
+    return true; // Permitir acceso para desarrollo
+  };
+
+  const validateActivationCode = (code) => {
+    const codeData = ACTIVATION_CODES[code];
+    if (!codeData) {
+      return { valid: false, error: 'Código de activación inválido' };
+    }
+
+    const now = new Date();
+    const validFrom = new Date(codeData.validFrom);
+    const validUntil = new Date(codeData.validUntil);
+
+    // Para desarrollo, saltar validación de tiempo
+    // En producción, activar estas validaciones:
+    /*
+    if (now < validFrom) {
+      return { valid: false, error: 'El código aún no está activo' };
+    }
+    
+    if (now > validUntil) {
+      return { valid: false, error: 'El código ha expirado' };
+    }
+    */
+
+    return { valid: true, data: codeData };
+  };
+
+  const login = async (activationCode, course, tutorName = '') => {
+    setIsLoading(true);
+    
+    try {
+      // Validar código de activación
+      const validation = validateActivationCode(activationCode);
+      if (!validation.valid) {
+        throw new Error(validation.error);
       }
+
+      const codeData = validation.data;
+
+      // Verificar que el curso pertenece al código
+      if (!codeData.courses.includes(course)) {
+        throw new Error(`El curso ${course} no pertenece al nivel ${codeData.name}`);
+      }
+
+      // Crear sesión de usuario
+      const session = {
+        role: 'tutor',
+        activationCode,
+        course,
+        level: codeData.level,
+        levelName: codeData.name,
+        tutorName: tutorName || `Tutor ${course}`,
+        loginTime: new Date().toISOString(),
+        sessionId: generateSessionId()
+      };
+
+      // Guardar sesión
+      localStorage.setItem('voting_session', JSON.stringify(session));
+      setUser(session);
+
+      return { success: true, session };
+    } catch (error) {
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const loginAsAdmin = async (password) => {
+    setIsLoading(true);
+    
+    try {
+      // Contraseña simple para desarrollo
+      if (password !== 'admin2024') {
+        throw new Error('Contraseña incorrecta');
+      }
+
+      const session = {
+        role: 'admin',
+        loginTime: new Date().toISOString(),
+        sessionId: generateSessionId()
+      };
+
+      localStorage.setItem('voting_session', JSON.stringify(session));
+      setUser(session);
+
+      return { success: true, session };
+    } catch (error) {
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('voting_session');
+    setUser(null);
+  };
+
+  const generateSessionId = () => {
+    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  };
+
+  const getAvailableCourses = (activationCode) => {
+    const codeData = ACTIVATION_CODES[activationCode];
+    return codeData ? codeData.courses : [];
+  };
+
+  const value = {
+    user,
+    isLoading,
+    isOnline,
+    login,
+    loginAsAdmin,
+    logout,
+    validateActivationCode,
+    getAvailableCourses,
+    activationCodes: ACTIVATION_CODES
+  };
+
   return (
-    <AuthContext.Provider value={contextValue}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export default AuthContext;
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth debe ser usado dentro de AuthProvider');
+  }
+  return context;
+};

@@ -22,6 +22,7 @@ const ConnectionStatus = () => {
 
   const getCouchDBText = () => {
     if (connectionStatus.loading) return 'Verificando...';
+    if (connectionStatus.error) return `Error: ${connectionStatus.error}`;
     return connectionStatus.remote ? 'CouchDB Conectado' : 'CouchDB No disponible';
   };
 
@@ -188,6 +189,27 @@ const ConnectionStatus = () => {
           <span>✅</span>
           <span>
             Sistema totalmente operativo. Sincronización automática activa.
+          </span>
+        </div>
+      )}
+
+      {/* Mostrar errores de base de datos si los hay */}
+      {connectionStatus.error && (
+        <div style={{
+          marginTop: '16px',
+          padding: '12px',
+          background: 'rgba(239, 68, 68, 0.2)',
+          borderRadius: '8px',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          color: '#FEF2F2',
+          fontSize: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span>🔧</span>
+          <span>
+            <strong>Error de base de datos:</strong> {connectionStatus.error}
           </span>
         </div>
       )}

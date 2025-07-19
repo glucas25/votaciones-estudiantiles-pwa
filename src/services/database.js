@@ -2,68 +2,105 @@
 import PouchDB from 'pouchdb';
 import PouchDBFind from 'pouchdb-find';
 
-// Configurar PouchDB
+// Configurar PouchDB para browser
 PouchDB.plugin(PouchDBFind);
 
-// Configuración simple
+// Configuración
 const DB_NAME = 'votaciones_estudiantiles';
 const COUCHDB_URL = 'http://admin:votaciones2024@localhost:5984';
 
-console.log('🔧 Configurando base de datos:', { DB_NAME, COUCHDB_URL });
+console.log('🔧 Configurando base de datos (browser):', { DB_NAME, COUCHDB_URL });
 
-// Crear bases de datos
+// Crear bases de datos de forma defensiva
 let localDB, remoteDB;
 
+// Función auxiliar para crear base de datos local
+const createLocalDB = () => {
+  try {
+    return new PouchDB(DB_NAME);
+  } catch (error) {
+    console.error('❌ Error creando base local:', error);
+    return null;
+  }
+};
+
+// Función auxiliar para crear base de datos remota
+const createRemoteDB = () => {
+  try {
+    return new PouchDB(`${COUCHDB_URL}/${DB_NAME}`, {
+      skip_setup: true,
+      ajax: {
+        timeout: 60000,
+        cache: false
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error creando base remota:', error);
+    return null;
+  }
+};
+
 try {
-  localDB = new PouchDB(DB_NAME);
-  remoteDB = new PouchDB(`${COUCHDB_URL}/${DB_NAME}`, {
-    skip_setup: true
-  });
-  console.log('✅ Bases de datos inicializadas');
+  localDB = createLocalDB();
+  remoteDB = createRemoteDB();
+  console.log('✅ Bases de datos inicializadas (browser build)');
 } catch (error) {
-  console.error('❌ Error inicializando bases de datos:', error);
+  console.error('❌ Error crítico inicializando bases de datos:', error);
 }
 
-// Objeto de base de datos simplificado
+// Objeto de base de datos
 const database = {
   local: localDB,
   remote: remoteDB,
 
   async getConnectionStatus() {
-    try {
-      const localInfo = await localDB.info();
-      console.log('📱 Base local:', localInfo.db_name);
-      
-      let remoteAvailable = false;
+    let localStatus = false;
+    let remoteStatus = false;
+
+    // Verificar base local
+    if (localDB) {
       try {
-        await remoteDB.info();
-        remoteAvailable = true;
-        console.log('☁️ Base remota conectada');
+        const localInfo = await localDB.info();
+        localStatus = true;
+        console.log('📱 Base local conectada:', localInfo.db_name);
+      } catch (error) {
+        console.warn('⚠️ Base local no disponible:', error.message);
+      }
+    } else {
+      console.warn('⚠️ Base local no inicializada');
+    }
+
+    // Verificar base remota
+    if (remoteDB) {
+      try {
+        const remoteInfo = await remoteDB.info();
+        remoteStatus = true;
+        console.log('☁️ Base remota conectada:', remoteInfo.db_name);
       } catch (error) {
         console.warn('⚠️ Base remota no disponible:', error.message);
       }
-
-      return {
-        local: true,
-        remote: remoteAvailable,
-        online: navigator.onLine
-      };
-    } catch (error) {
-      console.error('❌ Error verificando conexión:', error);
-      return {
-        local: false,
-        remote: false,
-        online: navigator.onLine
-      };
+    } else {
+      console.warn('⚠️ Base remota no inicializada');
     }
+
+    return {
+      local: localStatus,
+      remote: remoteStatus,
+      online: navigator.onLine
+    };
   },
 
   async find(selector, options = {}) {
+    if (!localDB) {
+      console.warn('⚠️ Base local no disponible para búsqueda');
+      return [];
+    }
     try {
       const result = await localDB.find({
         selector,
         ...options
       });
+      console.log('🔍 Búsqueda exitosa:', result.docs.length, 'documentos');
       return result.docs;
     } catch (error) {
       console.error('❌ Error en búsqueda:', error);
@@ -72,6 +109,9 @@ const database = {
   },
 
   async create(doc) {
+    if (!localDB) {
+      throw new Error('Base de datos local no disponible');
+    }
     try {
       const result = await localDB.post(doc);
       console.log('✅ Documento creado:', result.id);
@@ -83,6 +123,9 @@ const database = {
   },
 
   async read(id) {
+    if (!localDB) {
+      throw new Error('Base de datos local no disponible');
+    }
     try {
       const doc = await localDB.get(id);
       return doc;
@@ -96,6 +139,9 @@ const database = {
   },
 
   async update(doc) {
+    if (!localDB) {
+      throw new Error('Base de datos local no disponible');
+    }
     try {
       const result = await localDB.put(doc);
       console.log('✅ Documento actualizado:', result.id);
@@ -110,18 +156,56 @@ const database = {
 // Función de inicialización
 const initDatabase = async () => {
   try {
-    console.log('🚀 Inicializando base de datos...');
+    console.log('🚀 Inicializando base de datos (browser build)...');
     
-    // Crear índices básicos
-    await localDB.createIndex({
-      index: { fields: ['type'] }
-    });
+    // Verificar que las bases de datos estén disponibles
+    if (!localDB) {
+      console.warn('⚠️ Reintentando crear base local...');
+      localDB = createLocalDB();
+    }
 
-    console.log('✅ Base de datos inicializada correctamente');
+    if (!remoteDB) {
+      console.warn('⚠️ Reintentando crear base remota...');
+      remoteDB = createRemoteDB();
+    }
+
+    // Verificar conexión local si está disponible
+    if (localDB) {
+      try {
+        const localInfo = await localDB.info();
+        console.log('✅ Base de datos local:', localInfo.db_name);
+
+        // Crear índices básicos
+        try {
+          await localDB.createIndex({
+            index: { fields: ['type'] }
+          });
+          
+          await localDB.createIndex({
+            index: { fields: ['type', 'code'] }
+          });
+          
+          console.log('📊 Índices creados correctamente');
+        } catch (indexError) {
+          console.warn('⚠️ Algunos índices ya existen:', indexError.message);
+        }
+      } catch (localError) {
+        console.warn('⚠️ Error verificando base local:', localError.message);
+      }
+    } else {
+      console.warn('⚠️ Base local no disponible');
+    }
+
+    // Actualizar referencias en el objeto database
+    database.local = localDB;
+    database.remote = remoteDB;
+
+    console.log('✅ Base de datos inicializada correctamente (browser)');
     return database;
   } catch (error) {
     console.error('❌ Error inicializando base de datos:', error);
-    return database; // Retornar aunque falle
+    // Retornar database incluso si la inicialización falla
+    return database;
   }
 };
 

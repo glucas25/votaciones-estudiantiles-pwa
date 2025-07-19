@@ -1,90 +1,246 @@
 // src/components/tutor/TutorPanel.jsx
-import React from 'react';
-import { useAuthContext } from '../../contexts/AuthContext.jsx';
+import React, { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useStudents } from '../../contexts/StudentsContext';
+import StudentList from './StudentList';
+import VotingBooth from '../voting/VotingBooth';
+import './TutorPanel.css';
 
 const TutorPanel = () => {
-  const { currentTutor, logout } = useAuthContext();
+  const { user, isOnline } = useAuth();
+  const { 
+    searchTerm, 
+    setSearchTerm, 
+    filterType, 
+    setFilterType, 
+    getStudentsByStatus, 
+    getStats,
+    markStudentAsVoted 
+  } = useStudents();
 
-  const handleLogout = async () => {
-    const confirmLogout = window.confirm('¿Está seguro que desea cerrar sesión?');
-    if (confirmLogout) {
-      await logout();
-    }
+  const [activeSection, setActiveSection] = useState('pending'); // pending, voted, absent
+  const [votingStudent, setVotingStudent] = useState(null); // Estudiante en proceso de votación
+  const stats = getStats();
+  const { pending, voted, absent } = getStudentsByStatus();
+
+  const handleStartVoting = (student) => {
+    setVotingStudent(student);
   };
 
-  const styles = {
-    container: {
-      maxWidth: '1200px',
-      width: '100%',
-      padding: '20px'
-    },
-    header: {
-      background: 'rgba(255, 255, 255, 0.15)',
-      borderRadius: '20px',
-      padding: '24px',
-      marginBottom: '24px',
-      color: 'white'
-    },
-    title: {
-      fontSize: '2rem',
-      marginBottom: '16px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px'
-    },
-    info: {
-      fontSize: '1.1rem',
-      marginBottom: '20px'
-    },
-    button: {
-      background: 'rgba(255, 255, 255, 0.9)',
-      color: '#1e40af',
-      border: 'none',
-      borderRadius: '12px',
-      padding: '12px 20px',
-      fontSize: '1rem',
-      fontWeight: 'bold',
-      cursor: 'pointer',
-      marginRight: '12px'
-    },
-    dangerButton: {
-      background: 'rgba(239, 68, 68, 0.9)',
-      color: 'white'
-    }
+  const handleCloseVoting = () => {
+    setVotingStudent(null);
   };
 
+  const handleVoteComplete = (studentId) => {
+    markStudentAsVoted(studentId);
+    setVotingStudent(null);
+  };
+
+  const getConnectionStatus = () => {
+    return isOnline ? '🟢 Conectado' : '🔴 Offline';
+  };
+
+  const getSyncStatus = () => {
+    return isOnline ? '🔄 Sincronizado' : '⏸️ Pendiente sync';
+  };
+
+  const handleSyncData = () => {
+    // TODO: Implementar sincronización real
+    alert('🔄 Sincronización simulada completada');
+  };
+
+  const handleGenerateReport = () => {
+    const report = {
+      curso: user.course,
+      tutor: user.tutorName,
+      fecha: new Date().toLocaleDateString(),
+      hora: new Date().toLocaleTimeString(),
+      estadisticas: stats,
+      estudiantes: {
+        votaron: voted.map(s => `${s.apellidos}, ${s.nombres}`),
+        ausentes: absent.map(s => `${s.apellidos}, ${s.nombres}`),
+        pendientes: pending.map(s => `${s.apellidos}, ${s.nombres}`)
+      }
+    };
+    
+    console.log('📊 Reporte generado:', report);
+    alert('📊 Reporte generado en consola (F12)');
+  };
+
+  const handleBackup = () => {
+    const backupData = {
+      curso: user.course,
+      fecha: new Date().toISOString(),
+      estudiantes: [...pending, ...voted, ...absent],
+      estados: getStudentsByStatus()
+    };
+    
+    const dataStr = JSON.stringify(backupData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `backup_${user.course}_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    
+    URL.revokeObjectURL(url);
+  };
+
+  const formatTime = (time) => {
+    return new Date(time).toLocaleTimeString('es-EC', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Si hay un estudiante votando, mostrar solo la interfaz de votación
+  if (votingStudent) {
+    return (
+      <VotingBooth
+        student={votingStudent}
+        onClose={handleCloseVoting}
+        onVoteComplete={handleVoteComplete}
+      />
+    );
+  }
+
+  // Panel principal del tutor
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h1 style={styles.title}>
-          <span>👨‍🏫</span>
-          Panel de Votación
-        </h1>
-        <div style={styles.info}>
-          Bienvenido, {currentTutor?.name} - Curso: {currentTutor?.course}
+    <div className="tutor-panel">
+      {/* Header con estadísticas */}
+      <div className="panel-header">
+        <div className="header-info">
+          <h1>📊 VOTACIÓN ACTIVA - {user.course}</h1>
+          <div className="status-indicators">
+            <span className="status-item">{getConnectionStatus()}</span>
+            <span className="status-item">👥 {stats.voted}/{stats.total}</span>
+            <span className="status-item">❌ {stats.absent} ausentes</span>
+          </div>
         </div>
-        
-        <button style={styles.button}>
-          🗳️ Iniciar Votación (Próximamente)
-        </button>
-        
-        <button 
-          style={{...styles.button, ...styles.dangerButton}}
-          onClick={handleLogout}
+        <div className="progress-info">
+          <div className="progress-bar">
+            <div 
+              className="progress-fill" 
+              style={{ width: `${stats.participation}%` }}
+            ></div>
+          </div>
+          <span className="progress-text">{stats.participation}% completado</span>
+        </div>
+      </div>
+
+      {/* Controles de búsqueda y filtros */}
+      <div className="controls-section">
+        <div className="search-controls">
+          <div className="search-input-group">
+            <span className="search-icon">🔍</span>
+            <input
+              type="text"
+              placeholder="Buscar estudiante..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
+          </div>
+          
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="filter-select"
+          >
+            <option value="all">📋 Todos</option>
+            <option value="pending">🟢 Pendientes</option>
+            <option value="voted">✅ Votaron</option>
+            <option value="absent">❌ Ausentes</option>
+          </select>
+        </div>
+
+        <div className="action-buttons">
+          <button onClick={handleSyncData} className="action-btn sync-btn">
+            🔄 SINCRONIZAR
+          </button>
+        </div>
+      </div>
+
+      {/* Navegación entre secciones */}
+      <div className="section-tabs">
+        <button
+          className={`tab-button ${activeSection === 'pending' ? 'active' : ''}`}
+          onClick={() => setActiveSection('pending')}
         >
-          🚪 Cerrar Sesión
+          🟢 PENDIENTES ({pending.length})
+        </button>
+        <button
+          className={`tab-button ${activeSection === 'voted' ? 'active' : ''}`}
+          onClick={() => setActiveSection('voted')}
+        >
+          ✅ VOTARON ({voted.length})
+        </button>
+        <button
+          className={`tab-button ${activeSection === 'absent' ? 'active' : ''}`}
+          onClick={() => setActiveSection('absent')}
+        >
+          ❌ AUSENTES ({absent.length})
         </button>
       </div>
 
-      <div style={{
-        background: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: '16px',
-        padding: '32px',
-        textAlign: 'center',
-        color: 'white'
-      }}>
-        <h2>🎉 ¡Autenticación Exitosa!</h2>
-        <p>La Fase 2 está completa. El sistema de votación se implementará en las siguientes fases.</p>
+      {/* Lista de estudiantes */}
+      <div className="students-section">
+        {activeSection === 'pending' && (
+          <StudentList
+            students={pending}
+            status="pending"
+            title="Estudiantes Pendientes"
+            emptyMessage="🎉 ¡Todos los estudiantes han votado!"
+            onStartVoting={handleStartVoting}
+          />
+        )}
+        
+        {activeSection === 'voted' && (
+          <StudentList
+            students={voted}
+            status="voted"
+            title="Estudiantes que ya Votaron"
+            emptyMessage="📝 Aún no hay votos registrados"
+            onStartVoting={handleStartVoting}
+          />
+        )}
+        
+        {activeSection === 'absent' && (
+          <StudentList
+            students={absent}
+            status="absent"
+            title="Estudiantes Ausentes"
+            emptyMessage="👏 ¡Todos los estudiantes están presentes!"
+            onStartVoting={handleStartVoting}
+          />
+        )}
+      </div>
+
+      {/* Botones de acción inferiores */}
+      <div className="bottom-actions">
+        <button onClick={handleGenerateReport} className="action-btn report-btn">
+          📊 REPORTE
+        </button>
+        <button onClick={handleBackup} className="action-btn backup-btn">
+          💾 BACKUP
+        </button>
+        <button onClick={handleSyncData} className="action-btn sync-btn">
+          🔄 SYNC
+        </button>
+        <button className="action-btn kiosk-btn">
+          🖥️ QUIOSCO
+        </button>
+      </div>
+
+      {/* Información adicional */}
+      <div className="session-info">
+        <div className="session-details">
+          <span>👤 {user.tutorName}</span>
+          <span>🎓 {user.levelName}</span>
+          <span>🕐 Inicio: {formatTime(user.loginTime)}</span>
+          <span>{getSyncStatus()}</span>
+        </div>
       </div>
     </div>
   );

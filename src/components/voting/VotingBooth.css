@@ -1,0 +1,302 @@
+/* src/components/voting/VotingBooth.css */
+
+.voting-booth {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Header del booth */
+.booth-header {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 20px 30px;
+  border-bottom: 3px solid #4f46e5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.voter-identification h1 {
+  color: #1f2937;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0 0 15px 0;
+}
+
+.voter-details {
+  display: flex;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+
+.voter-info,
+.course-info,
+.time-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+}
+
+.label {
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.value {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.booth-controls {
+  display: flex;
+  gap: 15px;
+}
+
+.back-btn {
+  background: #6b7280;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.back-btn:hover {
+  background: #4b5563;
+  transform: translateY(-1px);
+}
+
+/* Contenido principal */
+.booth-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  background: white;
+}
+
+/* Footer del booth */
+.booth-footer {
+  background: #1f2937;
+  color: white;
+  padding: 15px 30px;
+  text-align: center;
+  font-size: 0.9rem;
+  border-top: 2px solid #374151;
+}
+
+.security-info {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* Pantalla de completado */
+.voting-booth.completed {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  justify-content: center;
+  align-items: center;
+}
+
+.completion-screen {
+  background: white;
+  border-radius: 20px;
+  padding: 50px;
+  text-align: center;
+  max-width: 500px;
+  margin: 0 auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  animation: slideIn 0.5s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.completion-icon {
+  font-size: 5rem;
+  margin-bottom: 20px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.completion-screen h2 {
+  color: #065f46;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 30px;
+}
+
+.voter-info {
+  background: #f0fdf4;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 2px solid #bbf7d0;
+}
+
+.voter-info p {
+  margin: 8px 0;
+  color: #374151;
+  font-size: 1rem;
+}
+
+.session-info {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 30px;
+  border: 1px solid #e2e8f0;
+}
+
+.session-info p {
+  margin: 5px 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.return-btn {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.return-btn:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .booth-header {
+    padding: 15px 20px;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .voter-identification h1 {
+    font-size: 1.5rem;
+    text-align: center;
+  }
+
+  .voter-details {
+    justify-content: center;
+    gap: 20px;
+  }
+
+  .voter-info,
+  .course-info,
+  .time-info {
+    font-size: 0.9rem;
+  }
+
+  .booth-controls {
+    justify-content: center;
+  }
+
+  .back-btn {
+    padding: 10px 15px;
+    font-size: 0.9rem;
+  }
+
+  .booth-footer {
+    padding: 12px 20px;
+    font-size: 0.8rem;
+  }
+
+  .security-info {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .completion-screen {
+    padding: 30px 20px;
+    margin: 20px;
+  }
+
+  .completion-screen h2 {
+    font-size: 1.6rem;
+  }
+
+  .completion-icon {
+    font-size: 4rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .booth-header {
+    padding: 12px 15px;
+  }
+
+  .voter-identification h1 {
+    font-size: 1.3rem;
+  }
+
+  .voter-details {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .voter-info,
+  .course-info,
+  .time-info {
+    font-size: 0.85rem;
+    justify-content: center;
+  }
+
+  .completion-screen {
+    padding: 25px 15px;
+    margin: 15px;
+  }
+
+  .completion-screen h2 {
+    font-size: 1.4rem;
+  }
+
+  .return-btn {
+    padding: 12px 20px;
+    font-size: 1rem;
+  }
+}
