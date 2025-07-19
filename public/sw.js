@@ -70,7 +70,7 @@ self.addEventListener('fetch', (event) => {
   if (!request.url.startsWith('http')) return;
   
   // Manejar peticiones según el tipo de recurso
-  if (url.pathname.startsWith('/api/') || url.hostname.includes('couchdb')) {
+  if (url.pathname.startsWith('/api/')) {
     // Estrategia network-first para APIs
     event.respondWith(handleApiRequest(request));
   } else if (request.destination === 'image') {

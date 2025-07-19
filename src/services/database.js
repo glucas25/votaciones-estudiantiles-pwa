@@ -1,213 +1,660 @@
 // src/services/database.js
-import PouchDB from 'pouchdb';
-import PouchDBFind from 'pouchdb-find';
+import PouchDB from 'pouchdb'
+import PouchDBFind from 'pouchdb-find'
+import PouchDBQuickSearch from 'pouchdb-quick-search'
 
-// Configurar PouchDB para browser
-PouchDB.plugin(PouchDBFind);
+// Configure PouchDB with plugins
+PouchDB.plugin(PouchDBFind)
+PouchDB.plugin(PouchDBQuickSearch)
 
-// Configuración
-const DB_NAME = 'votaciones_estudiantiles';
-const COUCHDB_URL = 'http://admin:votaciones2024@localhost:5984';
-
-console.log('🔧 Configurando base de datos (browser):', { DB_NAME, COUCHDB_URL });
-
-// Crear bases de datos de forma defensiva
-let localDB, remoteDB;
-
-// Función auxiliar para crear base de datos local
-const createLocalDB = () => {
-  try {
-    return new PouchDB(DB_NAME);
-  } catch (error) {
-    console.error('❌ Error creando base local:', error);
-    return null;
-  }
-};
-
-// Función auxiliar para crear base de datos remota
-const createRemoteDB = () => {
-  try {
-    return new PouchDB(`${COUCHDB_URL}/${DB_NAME}`, {
-      skip_setup: true,
-      ajax: {
-        timeout: 60000,
-        cache: false
-      }
-    });
-  } catch (error) {
-    console.error('❌ Error creando base remota:', error);
-    return null;
-  }
-};
-
-try {
-  localDB = createLocalDB();
-  remoteDB = createRemoteDB();
-  console.log('✅ Bases de datos inicializadas (browser build)');
-} catch (error) {
-  console.error('❌ Error crítico inicializando bases de datos:', error);
+// Database configuration
+const DB_CONFIG = {
+  students: 'votaciones_students_2024',
+  candidates: 'votaciones_candidates_2024', 
+  votes: 'votaciones_votes_2024',
+  sessions: 'votaciones_sessions_2024',
+  election_config: 'votaciones_config_2024'
 }
 
-// Objeto de base de datos
-const database = {
-  local: localDB,
-  remote: remoteDB,
+// Document types for consistency
+export const DOC_TYPES = {
+  STUDENT: 'student',
+  CANDIDATE: 'candidate',
+  VOTE: 'vote',
+  SESSION: 'session',
+  CONFIG: 'election_config',
+  BACKUP: 'backup'
+}
 
-  async getConnectionStatus() {
-    let localStatus = false;
-    let remoteStatus = false;
+// Education levels
+export const EDUCATION_LEVELS = {
+  BACHILLERATO: 'BACHILLERATO',
+  BASICA_SUPERIOR: 'BASICA_SUPERIOR', 
+  BASICA_MEDIA: 'BASICA_MEDIA',
+  BASICA_ELEMENTAL: 'BASICA_ELEMENTAL'
+}
 
-    // Verificar base local
-    if (localDB) {
-      try {
-        const localInfo = await localDB.info();
-        localStatus = true;
-        console.log('📱 Base local conectada:', localInfo.db_name);
-      } catch (error) {
-        console.warn('⚠️ Base local no disponible:', error.message);
-      }
-    } else {
-      console.warn('⚠️ Base local no inicializada');
-    }
+// Performance metrics
+const performanceMetrics = {
+  queries: 0,
+  queryTime: 0,
+  cacheHits: 0,
+  lastCompaction: null
+}
 
-    // Verificar base remota
-    if (remoteDB) {
-      try {
-        const remoteInfo = await remoteDB.info();
-        remoteStatus = true;
-        console.log('☁️ Base remota conectada:', remoteInfo.db_name);
-      } catch (error) {
-        console.warn('⚠️ Base remota no disponible:', error.message);
-      }
-    } else {
-      console.warn('⚠️ Base remota no inicializada');
-    }
+// In-memory cache for frequent queries
+const queryCache = new Map()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
-    return {
-      local: localStatus,
-      remote: remoteStatus,
-      online: navigator.onLine
-    };
-  },
-
-  async find(selector, options = {}) {
-    if (!localDB) {
-      console.warn('⚠️ Base local no disponible para búsqueda');
-      return [];
-    }
-    try {
-      const result = await localDB.find({
-        selector,
-        ...options
-      });
-      console.log('🔍 Búsqueda exitosa:', result.docs.length, 'documentos');
-      return result.docs;
-    } catch (error) {
-      console.error('❌ Error en búsqueda:', error);
-      return [];
-    }
-  },
-
-  async create(doc) {
-    if (!localDB) {
-      throw new Error('Base de datos local no disponible');
-    }
-    try {
-      const result = await localDB.post(doc);
-      console.log('✅ Documento creado:', result.id);
-      return result;
-    } catch (error) {
-      console.error('❌ Error creando documento:', error);
-      throw error;
-    }
-  },
-
-  async read(id) {
-    if (!localDB) {
-      throw new Error('Base de datos local no disponible');
-    }
-    try {
-      const doc = await localDB.get(id);
-      return doc;
-    } catch (error) {
-      if (error.status === 404) {
-        return null;
-      }
-      console.error('❌ Error leyendo documento:', error);
-      throw error;
-    }
-  },
-
-  async update(doc) {
-    if (!localDB) {
-      throw new Error('Base de datos local no disponible');
-    }
-    try {
-      const result = await localDB.put(doc);
-      console.log('✅ Documento actualizado:', result.id);
-      return result;
-    } catch (error) {
-      console.error('❌ Error actualizando documento:', error);
-      throw error;
-    }
-  }
-};
-
-// Función de inicialización
-const initDatabase = async () => {
-  try {
-    console.log('🚀 Inicializando base de datos (browser build)...');
+class DatabaseService {
+  constructor() {
+    this.dbs = {}
+    this.isInitialized = false
+    this.syncStatus = {}
+    this.backupInterval = null
     
-    // Verificar que las bases de datos estén disponibles
-    if (!localDB) {
-      console.warn('⚠️ Reintentando crear base local...');
-      localDB = createLocalDB();
-    }
-
-    if (!remoteDB) {
-      console.warn('⚠️ Reintentando crear base remota...');
-      remoteDB = createRemoteDB();
-    }
-
-    // Verificar conexión local si está disponible
-    if (localDB) {
-      try {
-        const localInfo = await localDB.info();
-        console.log('✅ Base de datos local:', localInfo.db_name);
-
-        // Crear índices básicos
-        try {
-          await localDB.createIndex({
-            index: { fields: ['type'] }
-          });
-          
-          await localDB.createIndex({
-            index: { fields: ['type', 'code'] }
-          });
-          
-          console.log('📊 Índices creados correctamente');
-        } catch (indexError) {
-          console.warn('⚠️ Algunos índices ya existen:', indexError.message);
-        }
-      } catch (localError) {
-        console.warn('⚠️ Error verificando base local:', localError.message);
-      }
-    } else {
-      console.warn('⚠️ Base local no disponible');
-    }
-
-    // Actualizar referencias en el objeto database
-    database.local = localDB;
-    database.remote = remoteDB;
-
-    console.log('✅ Base de datos inicializada correctamente (browser)');
-    return database;
-  } catch (error) {
-    console.error('❌ Error inicializando base de datos:', error);
-    // Retornar database incluso si la inicialización falla
-    return database;
+    // Initialize all databases
+    this.initializeDatabases()
   }
-};
 
-export { database, initDatabase };
-export default database;
+  /**
+   * Initialize all PouchDB databases
+   */
+  async initializeDatabases() {
+    try {
+      console.log('🚀 Initializing PouchDB databases...')
+      
+      // Create all databases
+      for (const [key, dbName] of Object.entries(DB_CONFIG)) {
+        this.dbs[key] = new PouchDB(dbName)
+        this.syncStatus[key] = {
+          status: 'ready',
+          lastOperation: null,
+          error: null
+        }
+      }
+      
+      // Create indexes for optimal performance
+      await this.createIndexes()
+      
+      // Setup automatic compaction
+      this.setupAutoCompaction()
+      
+      // Start backup system
+      this.startBackupSystem()
+      
+      this.isInitialized = true
+      console.log('✅ All databases initialized successfully')
+      
+      return { success: true, databases: Object.keys(this.dbs) }
+    } catch (error) {
+      console.error('❌ Failed to initialize databases:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  /**
+   * Create optimized indexes for all databases
+   */
+  async createIndexes() {
+    try {
+      // Students indexes
+      await this.dbs.students.createIndex({
+        index: { fields: ['type', 'level', 'course'] }
+      })
+      await this.dbs.students.createIndex({
+        index: { fields: ['type', 'cedula'] }
+      })
+      await this.dbs.students.createIndex({
+        index: { fields: ['type', 'status'] }
+      })
+      await this.dbs.students.createIndex({
+        index: { fields: ['type', 'course', 'numero'] }
+      })
+
+      // Candidates indexes
+      await this.dbs.candidates.createIndex({
+        index: { fields: ['type', 'level', 'cargo'] }
+      })
+      await this.dbs.candidates.createIndex({
+        index: { fields: ['type', 'ticketId'] }
+      })
+
+      // Votes indexes
+      await this.dbs.votes.createIndex({
+        index: { fields: ['type', 'studentId'] }
+      })
+      await this.dbs.votes.createIndex({
+        index: { fields: ['type', 'candidateId'] }
+      })
+      await this.dbs.votes.createIndex({
+        index: { fields: ['type', 'level', 'course'] }
+      })
+      await this.dbs.votes.createIndex({
+        index: { fields: ['type', 'timestamp'] }
+      })
+
+      // Sessions indexes
+      await this.dbs.sessions.createIndex({
+        index: { fields: ['type', 'course'] }
+      })
+      await this.dbs.sessions.createIndex({
+        index: { fields: ['type', 'status'] }
+      })
+
+      // Config indexes
+      await this.dbs.election_config.createIndex({
+        index: { fields: ['type', 'key'] }
+      })
+
+      console.log('📊 Database indexes created successfully')
+    } catch (error) {
+      console.warn('⚠️ Some indexes may already exist:', error.message)
+    }
+  }
+
+  /**
+   * Generate consistent document ID
+   */
+  generateId(type, ...parts) {
+    const timestamp = Date.now()
+    return `${type}_${parts.join('_')}_${timestamp}`
+  }
+
+  /**
+   * Create document with validation and performance tracking
+   */
+  async createDocument(dbName, document, type) {
+    const startTime = performance.now()
+    
+    try {
+      if (!this.dbs[dbName]) {
+        throw new Error(`Database ${dbName} not found`)
+      }
+
+      // Add metadata
+      const docWithMeta = {
+        ...document,
+        type,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+
+      // Generate ID if not provided
+      if (!docWithMeta._id) {
+        docWithMeta._id = this.generateId(type, document.cedula || document.nombre || Math.random().toString(36).substr(2, 9))
+      }
+
+      const result = await this.dbs[dbName].post(docWithMeta)
+      
+      // Update performance metrics
+      performanceMetrics.queries++
+      performanceMetrics.queryTime += performance.now() - startTime
+      
+      // Clear related cache
+      this.clearCacheByPattern(`${dbName}_${type}`)
+      
+      console.log(`✅ Document created in ${dbName}:`, result.id)
+      return { success: true, id: result.id, rev: result.rev }
+      
+    } catch (error) {
+      console.error(`❌ Failed to create document in ${dbName}:`, error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  /**
+   * Find documents with caching and performance optimization
+   */
+  async findDocuments(dbName, query, useCache = true) {
+    const startTime = performance.now()
+    const cacheKey = `${dbName}_${JSON.stringify(query)}`
+    
+    // Check cache first
+    if (useCache && queryCache.has(cacheKey)) {
+      const cached = queryCache.get(cacheKey)
+      if (Date.now() - cached.timestamp < CACHE_TTL) {
+        performanceMetrics.cacheHits++
+        return cached.data
+      } else {
+        queryCache.delete(cacheKey)
+      }
+    }
+
+    try {
+      if (!this.dbs[dbName]) {
+        throw new Error(`Database ${dbName} not found`)
+      }
+
+      const result = await this.dbs[dbName].find(query)
+      
+      // Cache the result
+      if (useCache) {
+        queryCache.set(cacheKey, {
+          data: result,
+          timestamp: Date.now()
+        })
+      }
+      
+      // Update performance metrics
+      performanceMetrics.queries++
+      performanceMetrics.queryTime += performance.now() - startTime
+      
+      return result
+      
+    } catch (error) {
+      console.error(`❌ Failed to find documents in ${dbName}:`, error)
+      return { docs: [], total: 0, limit: query.limit || 25, error: error.message }
+    }
+  }
+
+  /**
+   * Update document with optimistic locking
+   */
+  async updateDocument(dbName, document) {
+    const startTime = performance.now()
+    
+    try {
+      if (!this.dbs[dbName]) {
+        throw new Error(`Database ${dbName} not found`)
+      }
+
+      // Add update timestamp
+      const docWithMeta = {
+        ...document,
+        updatedAt: new Date().toISOString()
+      }
+
+      const result = await this.dbs[dbName].put(docWithMeta)
+      
+      // Update performance metrics
+      performanceMetrics.queries++
+      performanceMetrics.queryTime += performance.now() - startTime
+      
+      // Clear related cache
+      this.clearCacheByPattern(`${dbName}_${document.type}`)
+      
+      console.log(`✅ Document updated in ${dbName}:`, result.id)
+      return { success: true, id: result.id, rev: result.rev }
+      
+    } catch (error) {
+      console.error(`❌ Failed to update document in ${dbName}:`, error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  /**
+   * Delete document
+   */
+  async deleteDocument(dbName, id, rev) {
+    try {
+      if (!this.dbs[dbName]) {
+        throw new Error(`Database ${dbName} not found`)
+      }
+
+      const result = await this.dbs[dbName].remove(id, rev)
+      
+      // Clear related cache
+      this.clearCacheByPattern(`${dbName}_`)
+      
+      console.log(`✅ Document deleted from ${dbName}:`, id)
+      return { success: true, id: result.id, rev: result.rev }
+      
+    } catch (error) {
+      console.error(`❌ Failed to delete document from ${dbName}:`, error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  /**
+   * Bulk operations for performance
+   */
+  async bulkCreate(dbName, documents, type) {
+    const startTime = performance.now()
+    
+    try {
+      if (!this.dbs[dbName]) {
+        throw new Error(`Database ${dbName} not found`)
+      }
+
+      // Add metadata to all documents
+      const docsWithMeta = documents.map((doc, index) => ({
+        ...doc,
+        type,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        _id: doc._id || this.generateId(type, doc.cedula || doc.nombre || index.toString())
+      }))
+
+      const result = await this.dbs[dbName].bulkDocs(docsWithMeta)
+      
+      // Update performance metrics
+      performanceMetrics.queries++
+      performanceMetrics.queryTime += performance.now() - startTime
+      
+      // Clear related cache
+      this.clearCacheByPattern(`${dbName}_${type}`)
+      
+      const successful = result.filter(r => !r.error).length
+      console.log(`✅ Bulk created ${successful}/${documents.length} documents in ${dbName}`)
+      
+      return { 
+        success: true, 
+        results: result,
+        successful,
+        total: documents.length 
+      }
+      
+    } catch (error) {
+      console.error(`❌ Failed bulk create in ${dbName}:`, error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  /**
+   * Search with full-text search capability
+   */
+  async searchDocuments(dbName, query, fields = ['nombre', 'apellidos', 'cedula']) {
+    try {
+      if (!this.dbs[dbName]) {
+        throw new Error(`Database ${dbName} not found`)
+      }
+
+      // Use quick-search for full-text search
+      const result = await this.dbs[dbName].search({
+        query,
+        fields,
+        include_docs: true,
+        limit: 50
+      })
+      
+      return {
+        success: true,
+        docs: result.rows.map(row => row.doc),
+        total: result.total_rows
+      }
+      
+    } catch (error) {
+      // Fallback to regular find if search not available
+      const fallbackQuery = {
+        selector: {
+          $or: fields.map(field => ({
+            [field]: { $regex: new RegExp(query, 'i') }
+          }))
+        },
+        limit: 50
+      }
+      
+      const result = await this.findDocuments(dbName, fallbackQuery, false)
+      return {
+        success: true,
+        docs: result.docs,
+        total: result.docs.length
+      }
+    }
+  }
+
+  /**
+   * Get database statistics
+   */
+  async getDatabaseStats() {
+    const stats = {}
+    
+    for (const [key, db] of Object.entries(this.dbs)) {
+      try {
+        const info = await db.info()
+        stats[key] = {
+          name: info.db_name,
+          docs: info.doc_count,
+          size: info.data_size,
+          updateSeq: info.update_seq
+        }
+      } catch (error) {
+        stats[key] = { error: error.message }
+      }
+    }
+    
+    return {
+      databases: stats,
+      performance: {
+        ...performanceMetrics,
+        averageQueryTime: performanceMetrics.queries > 0 ? 
+          performanceMetrics.queryTime / performanceMetrics.queries : 0,
+        cacheSize: queryCache.size
+      }
+    }
+  }
+
+  /**
+   * Setup automatic database compaction
+   */
+  setupAutoCompaction() {
+    // Compact databases every hour
+    setInterval(async () => {
+      for (const [key, db] of Object.entries(this.dbs)) {
+        try {
+          await db.compact()
+          console.log(`🗜️ Compacted database: ${key}`)
+        } catch (error) {
+          console.warn(`⚠️ Failed to compact ${key}:`, error.message)
+        }
+      }
+      performanceMetrics.lastCompaction = new Date().toISOString()
+    }, 60 * 60 * 1000) // 1 hour
+  }
+
+  /**
+   * Start automatic backup system
+   */
+  startBackupSystem() {
+    // Backup every 5 minutes during active use
+    this.backupInterval = setInterval(async () => {
+      await this.createAutoBackup()
+    }, 5 * 60 * 1000) // 5 minutes
+  }
+
+  /**
+   * Create automatic backup
+   */
+  async createAutoBackup() {
+    try {
+      const timestamp = new Date().toISOString()
+      const backupData = await this.exportAllData()
+      
+      // Store backup in election_config database
+      const backupDoc = {
+        _id: `backup_auto_${Date.now()}`,
+        type: DOC_TYPES.BACKUP,
+        timestamp,
+        data: backupData,
+        automatic: true,
+        size: JSON.stringify(backupData).length
+      }
+      
+      await this.dbs.election_config.post(backupDoc)
+      
+      // Keep only last 5 automatic backups
+      await this.cleanupOldBackups()
+      
+      console.log(`💾 Automatic backup created: ${timestamp}`)
+      
+    } catch (error) {
+      console.error('❌ Failed to create automatic backup:', error)
+    }
+  }
+
+  /**
+   * Export all data for backup
+   */
+  async exportAllData() {
+    const exportData = {}
+    
+    for (const [key, db] of Object.entries(this.dbs)) {
+      try {
+        const allDocs = await db.allDocs({
+          include_docs: true,
+          attachments: true
+        })
+        
+        exportData[key] = allDocs.rows.map(row => row.doc)
+      } catch (error) {
+        console.error(`Failed to export ${key}:`, error)
+        exportData[key] = { error: error.message }
+      }
+    }
+    
+    return exportData
+  }
+
+  /**
+   * Import data from backup
+   */
+  async importBackupData(backupData) {
+    try {
+      const results = {}
+      
+      for (const [dbName, docs] of Object.entries(backupData)) {
+        if (this.dbs[dbName] && Array.isArray(docs)) {
+          // Clear existing data
+          const allDocs = await this.dbs[dbName].allDocs()
+          const docsToDelete = allDocs.rows.map(row => ({
+            _id: row.id,
+            _rev: row.value.rev,
+            _deleted: true
+          }))
+          
+          if (docsToDelete.length > 0) {
+            await this.dbs[dbName].bulkDocs(docsToDelete)
+          }
+          
+          // Import new data
+          const result = await this.dbs[dbName].bulkDocs(docs)
+          results[dbName] = result
+        }
+      }
+      
+      // Clear cache
+      this.clearAllCache()
+      
+      console.log('✅ Backup data imported successfully')
+      return { success: true, results }
+      
+    } catch (error) {
+      console.error('❌ Failed to import backup data:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  /**
+   * Clean up old automatic backups
+   */
+  async cleanupOldBackups() {
+    try {
+      const backups = await this.dbs.election_config.find({
+        selector: {
+          type: DOC_TYPES.BACKUP,
+          automatic: true
+        },
+        sort: [{ timestamp: 'desc' }]
+      })
+      
+      // Keep only the 5 most recent backups
+      const toDelete = backups.docs.slice(5)
+      
+      for (const backup of toDelete) {
+        await this.dbs.election_config.remove(backup._id, backup._rev)
+      }
+      
+      if (toDelete.length > 0) {
+        console.log(`🗑️ Cleaned up ${toDelete.length} old backups`)
+      }
+      
+    } catch (error) {
+      console.warn('⚠️ Failed to cleanup old backups:', error)
+    }
+  }
+
+  /**
+   * Clear cache by pattern
+   */
+  clearCacheByPattern(pattern) {
+    for (const key of queryCache.keys()) {
+      if (key.includes(pattern)) {
+        queryCache.delete(key)
+      }
+    }
+  }
+
+  /**
+   * Clear all cache
+   */
+  clearAllCache() {
+    queryCache.clear()
+    console.log('🧹 Query cache cleared')
+  }
+
+  /**
+   * Get connection status
+   */
+  async getConnectionStatus() {
+    const status = {
+      local: this.isInitialized,
+      online: navigator.onLine,
+      databases: {},
+      performance: performanceMetrics
+    }
+    
+    for (const [key, db] of Object.entries(this.dbs)) {
+      try {
+        const info = await db.info()
+        status.databases[key] = {
+          ready: true,
+          docs: info.doc_count,
+          size: info.data_size
+        }
+      } catch (error) {
+        status.databases[key] = {
+          ready: false,
+          error: error.message
+        }
+      }
+    }
+    
+    return status
+  }
+
+  /**
+   * Cleanup resources
+   */
+  async cleanup() {
+    if (this.backupInterval) {
+      clearInterval(this.backupInterval)
+    }
+    
+    this.clearAllCache()
+    
+    // Close all databases
+    for (const db of Object.values(this.dbs)) {
+      try {
+        await db.close()
+      } catch (error) {
+        console.warn('Failed to close database:', error)
+      }
+    }
+    
+    console.log('🧹 Database service cleaned up')
+  }
+
+  /**
+   * Check if service is ready
+   */
+  isReady() {
+    return this.isInitialized
+  }
+}
+
+// Create singleton instance
+const databaseService = new DatabaseService()
+
+export default databaseService
+export { databaseService }

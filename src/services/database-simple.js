@@ -1,23 +1,20 @@
 // src/services/database-simple.js
-// Versión simplificada de database sin dependencias problemáticas
+// Versión simplificada de database para desarrollo local
 
 console.log('🔧 Configurando base de datos (versión simplificada)');
 
-// Configuración
+// Configuración para desarrollo local
 const DB_NAME = 'votaciones_estudiantiles';
-const COUCHDB_URL = 'http://admin:votaciones2024@localhost:5984';
 
-// Mock de base de datos para testing
+// Mock de base de datos para testing y desarrollo
 const mockDatabase = {
   local: null,
-  remote: null,
 
   async getConnectionStatus() {
     return {
-      local: false,
-      remote: false,
+      local: true,
       online: navigator.onLine,
-      error: 'PouchDB deshabilitado temporalmente - usando mock'
+      mode: 'mock-local'
     };
   },
 
@@ -44,7 +41,7 @@ const mockDatabase = {
 
 // Función de inicialización mock
 const initDatabase = async () => {
-  console.log('🚀 Inicializando base de datos (mock)...');
+  console.log('🚀 Inicializando base de datos (mock local)...');
   console.log('✅ Base de datos mock inicializada');
   return mockDatabase;
 };

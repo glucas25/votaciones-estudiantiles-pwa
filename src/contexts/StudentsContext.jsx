@@ -53,6 +53,8 @@ export const StudentsProvider = ({ children }) => {
   const [studentStates, setStudentStates] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all'); // all, pending, voted, absent
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Cargar estudiantes del curso cuando el usuario cambie
   useEffect(() => {

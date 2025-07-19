@@ -7,12 +7,10 @@ export default defineConfig({
     global: 'globalThis',
   },
   optimizeDeps: {
-    include: ['pouchdb']  // <-- Cambié pouchdb-browser por pouchdb
+    include: ['pouchdb']
   },
   server: {
-    host: true,
     port: 3000,
-    strictPort: true,
     open: true,
   },
   build: {

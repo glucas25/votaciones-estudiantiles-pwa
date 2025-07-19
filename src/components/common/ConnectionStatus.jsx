@@ -15,15 +15,15 @@ const ConnectionStatus = () => {
     return connectionStatus.online ? 'Online' : 'Sin conexión';
   };
 
-  const getCouchDBIcon = () => {
+  const getLocalDBIcon = () => {
     if (connectionStatus.loading) return '🔄';
-    return connectionStatus.remote ? '🟢' : '🔴';
+    return connectionStatus.local ? '🟢' : '🔴';
   };
 
-  const getCouchDBText = () => {
+  const getLocalDBText = () => {
     if (connectionStatus.loading) return 'Verificando...';
     if (connectionStatus.error) return `Error: ${connectionStatus.error}`;
-    return connectionStatus.remote ? 'CouchDB Conectado' : 'CouchDB No disponible';
+    return connectionStatus.local ? 'Base Local Conectada' : 'Base Local No disponible';
   };
 
   const getViteIcon = () => '🟢';
@@ -110,12 +110,12 @@ const ConnectionStatus = () => {
           alignItems: 'center',
           gap: '8px'
         }}>
-          <span style={{ fontSize: '16px' }}>{getCouchDBIcon()}</span>
+          <span style={{ fontSize: '16px' }}>{getLocalDBIcon()}</span>
           <span style={{
-            color: connectionStatus.remote ? '#10B981' : '#EF4444',
+            color: connectionStatus.local ? '#10B981' : '#EF4444',
             fontWeight: '500'
           }}>
-            {getCouchDBText()}
+            {getLocalDBText()}
           </span>
         </div>
 
@@ -167,13 +167,13 @@ const ConnectionStatus = () => {
         }}>
           <span>⚠️</span>
           <span>
-            Modo offline activado. Los datos se sincronizarán automáticamente cuando se restaure la conexión.
+            Modo offline activado. Los datos se mantienen localmente hasta reconectar.
           </span>
         </div>
       )}
 
-      {/* Indicador de sincronización */}
-      {connectionStatus.online && connectionStatus.remote && (
+      {/* Indicador de sistema local */}
+      {connectionStatus.local && (
         <div style={{
           marginTop: '16px',
           padding: '12px',
@@ -188,7 +188,7 @@ const ConnectionStatus = () => {
         }}>
           <span>✅</span>
           <span>
-            Sistema totalmente operativo. Sincronización automática activa.
+            Sistema local totalmente operativo. Datos almacenados localmente.
           </span>
         </div>
       )}
