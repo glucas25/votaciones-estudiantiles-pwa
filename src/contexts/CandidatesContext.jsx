@@ -1,6 +1,7 @@
 // src/contexts/CandidatesContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import databaseService, { DOC_TYPES, EDUCATION_LEVELS } from '../services/database-indexeddb.js';
 
 const CandidatesContext = createContext();
 
@@ -138,31 +139,298 @@ export const CandidatesProvider = ({ children }) => {
   const [candidates, setCandidates] = useState({});
   const [votes, setVotes] = useState({});
   const [selectedVotes, setSelectedVotes] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [isDbReady, setIsDbReady] = useState(false);
+
+  // Check if database is ready
+  useEffect(() => {
+    const checkDbReady = () => {
+      try {
+        if (databaseService.isReady()) {
+          setIsDbReady(true);
+          console.log('Database is ready');
+        } else {
+          // Retry after a short delay, but don't wait forever
+          setTimeout(checkDbReady, 100);
+        }
+      } catch (error) {
+        console.error('Database check failed, proceeding without DB:', error);
+        setIsDbReady(false);
+      }
+    };
+    
+    // Set a timeout to force loading without DB if it takes too long
+    const forceTimeout = setTimeout(() => {
+      if (!isDbReady) {
+        console.log('Database taking too long, proceeding without it');
+        setIsDbReady(false);
+      }
+    }, 2000);
+    
+    checkDbReady();
+    
+    return () => clearTimeout(forceTimeout);
+  }, []);
 
   useEffect(() => {
+    console.log('CandidatesContext useEffect:', { user, isDbReady });
     if (user && user.level) {
-      loadCandidatesForLevel(user.level);
-      loadVotes();
+      console.log('Initializing candidates for level:', user.level);
+      if (isDbReady) {
+        console.log('Using database');
+        initializeCandidatesData(user.level);
+        loadVotes();
+      } else {
+        console.log('Database not ready, using mock data directly');
+        loadCandidatesForLevel(user.level);
+      }
+    } else if (user && !user.level) {
+      console.log('User level not defined:', user);
     }
-  }, [user]);
+  }, [user, isDbReady]);
 
+  /**
+   * Initialize candidates data - try PouchDB first, fallback to mock data
+   */
+  const initializeCandidatesData = async (level) => {
+    console.log('initializeCandidatesData called with level:', level);
+    setLoading(true);
+    setError(null);
+
+    try {
+      // First try to load from PouchDB
+      const candidatesFromDB = await loadCandidatesFromDB(level);
+      console.log('Candidates from DB:', candidatesFromDB);
+      
+      if (candidatesFromDB && Object.keys(candidatesFromDB).length > 0) {
+        setCandidates(candidatesFromDB);
+        console.log('Set candidates from DB:', candidatesFromDB);
+      } else {
+        // If no candidates in DB, initialize with mock data
+        console.log('No candidates in DB, initializing with mock data');
+        await initializeMockCandidates(level);
+      }
+    } catch (err) {
+      console.error('Failed to initialize candidates:', err);
+      setError(err.message);
+      // Fallback to mock data
+      console.log('Falling back to mock data due to error');
+      loadCandidatesForLevel(level);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Load candidates from PouchDB
+   */
+  const loadCandidatesFromDB = async (level) => {
+    try {
+      const result = await databaseService.findDocuments('candidates', {
+        selector: {
+          type: DOC_TYPES.CANDIDATE,
+          level: level
+        },
+        sort: ['cargo', 'nombre']
+      });
+
+      if (result.docs && result.docs.length > 0) {
+        // Group candidates by cargo
+        const candidatesByPosition = {};
+        result.docs.forEach(candidate => {
+          if (!candidatesByPosition[candidate.cargo]) {
+            candidatesByPosition[candidate.cargo] = [];
+          }
+          candidatesByPosition[candidate.cargo].push(candidate);
+        });
+        
+        return candidatesByPosition;
+      }
+      
+      return {};
+    } catch (err) {
+      console.error('Failed to load candidates from DB:', err);
+      return {};
+    }
+  };
+
+  /**
+   * Initialize mock candidates in PouchDB if database is empty
+   */
+  const initializeMockCandidates = async (level) => {
+    const mockCandidates = MOCK_CANDIDATES[level] || {};
+    
+    if (Object.keys(mockCandidates).length === 0) {
+      setCandidates({});
+      return;
+    }
+
+    try {
+      console.log(`Initializing mock candidates for ${level}`);
+      
+      // Convert mock data to PouchDB format
+      const candidatesForDB = [];
+      
+      Object.entries(mockCandidates).forEach(([cargo, candidatesList]) => {
+        candidatesList.forEach(candidate => {
+          candidatesForDB.push({
+            nombre: candidate.nombre,
+            apellidos: '', // Mock data doesn't have apellidos
+            cargo: cargo,
+            level: level,
+            ticketId: candidate.lista,
+            foto: candidate.foto,
+            propuestas: Array.isArray(candidate.propuestas) ? candidate.propuestas.join(', ') : candidate.propuestas,
+            experiencia: candidate.experiencia,
+            slogan: candidate.slogan,
+            color: candidate.color,
+            votos: 0,
+            // Migration metadata
+            migratedFrom: 'mockData',
+            originalId: candidate.id
+          });
+        });
+      });
+
+      if (candidatesForDB.length > 0) {
+        const result = await databaseService.bulkCreate('candidates', candidatesForDB, DOC_TYPES.CANDIDATE);
+        
+        if (result.success) {
+          // Reload candidates from DB
+          const reloadedCandidates = await loadCandidatesFromDB(level);
+          setCandidates(reloadedCandidates);
+        } else {
+          // Fallback to mock data
+          setCandidates(mockCandidates);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to initialize mock candidates:', err);
+      // Fallback to mock data
+      setCandidates(mockCandidates);
+    }
+  };
+
+  /**
+   * Fallback to original localStorage method
+   */
   const loadCandidatesForLevel = (level) => {
+    console.log('loadCandidatesForLevel called with level:', level);
     const levelCandidates = MOCK_CANDIDATES[level] || {};
+    console.log('Mock candidates for level:', level, levelCandidates);
     setCandidates(levelCandidates);
   };
 
-  const loadVotes = () => {
+  /**
+   * Load votes from PouchDB and localStorage
+   */
+  const loadVotes = async () => {
+    try {
+      // Try to load from PouchDB first
+      const result = await databaseService.findDocuments('votes', {
+        selector: {
+          type: DOC_TYPES.VOTE,
+          level: user?.level,
+          course: user?.course
+        }
+      });
+
+      if (result.docs && result.docs.length > 0) {
+        // Convert PouchDB votes to the expected format
+        const votesByStudent = {};
+        result.docs.forEach(vote => {
+          if (!votesByStudent[vote.studentId]) {
+            votesByStudent[vote.studentId] = {};
+          }
+          
+          // Find candidate info to get cargo
+          const candidateId = vote.candidateId;
+          let cargo = 'UNKNOWN';
+          
+          // Try to determine cargo from candidate data
+          Object.entries(candidates).forEach(([cargoName, candidatesList]) => {
+            const found = candidatesList.find(c => 
+              (c._id && c._id === candidateId) || 
+              (c.id && c.id === candidateId) ||
+              (c.originalId && c.originalId === candidateId)
+            );
+            if (found) {
+              cargo = cargoName;
+            }
+          });
+
+          votesByStudent[vote.studentId][cargo] = {
+            id: vote._id,
+            studentId: vote.studentId,
+            candidateId: vote.candidateId,
+            cargo: cargo,
+            timestamp: vote.timestamp,
+            course: vote.course,
+            level: vote.level
+          };
+        });
+        
+        setVotes(votesByStudent);
+      } else {
+        // Fallback to localStorage
+        loadVotesFromLocalStorage();
+      }
+    } catch (err) {
+      console.error('Failed to load votes from PouchDB:', err);
+      // Fallback to localStorage
+      loadVotesFromLocalStorage();
+    }
+  };
+
+  /**
+   * Load votes from localStorage (fallback)
+   */
+  const loadVotesFromLocalStorage = () => {
     const savedVotes = localStorage.getItem(VOTES_STORAGE_KEY);
     if (savedVotes) {
       setVotes(JSON.parse(savedVotes));
     }
   };
 
-  const saveVotes = (newVotes) => {
+  /**
+   * Save votes to both PouchDB and localStorage
+   */
+  const saveVotes = async (newVotes) => {
+    // Always save to localStorage as backup
     localStorage.setItem(VOTES_STORAGE_KEY, JSON.stringify(newVotes));
+    
+    // Try to save to PouchDB if available
+    if (isDbReady) {
+      try {
+        // Convert votes to PouchDB format and save
+        const votesToSave = [];
+        
+        Object.entries(newVotes).forEach(([studentId, studentVotes]) => {
+          Object.entries(studentVotes).forEach(([cargo, voteData]) => {
+            votesToSave.push({
+              studentId: studentId,
+              candidateId: voteData.candidateId,
+              cargo: cargo,
+              level: voteData.level,
+              course: voteData.course,
+              timestamp: voteData.timestamp
+            });
+          });
+        });
+
+        // Save votes to PouchDB (replace existing)
+        for (const vote of votesToSave) {
+          await databaseService.createDocument('votes', vote, DOC_TYPES.VOTE);
+        }
+      } catch (err) {
+        console.error('Failed to save votes to PouchDB:', err);
+        // Continue with localStorage only
+      }
+    }
   };
 
-  const castVote = (studentId, candidateId, cargo) => {
+  const castVote = async (studentId, candidateId, cargo) => {
     const voteRecord = {
       id: `vote_${Date.now()}_${studentId}`,
       studentId,
@@ -183,7 +451,7 @@ export const CandidatesProvider = ({ children }) => {
     };
 
     setVotes(newVotes);
-    saveVotes(newVotes);
+    await saveVotes(newVotes);
     
     return voteRecord;
   };
@@ -221,7 +489,11 @@ export const CandidatesProvider = ({ children }) => {
   const getCandidateById = (candidateId) => {
     for (const cargo in candidates) {
       const candidatesList = candidates[cargo];
-      const found = candidatesList.find(c => c.id === candidateId);
+      const found = candidatesList.find(c => 
+        c.id === candidateId || 
+        c._id === candidateId || 
+        c.originalId === candidateId
+      );
       if (found) return found;
     }
     return null;
@@ -271,15 +543,39 @@ export const CandidatesProvider = ({ children }) => {
     return Object.keys(candidates);
   };
 
-  const resetAllVotes = () => {
+  const resetAllVotes = async () => {
     setVotes({});
     localStorage.removeItem(VOTES_STORAGE_KEY);
+    
+    // Also clear votes from PouchDB if available
+    if (isDbReady) {
+      try {
+        const result = await databaseService.findDocuments('votes', {
+          selector: {
+            type: DOC_TYPES.VOTE,
+            level: user?.level,
+            course: user?.course
+          }
+        });
+
+        if (result.docs && result.docs.length > 0) {
+          for (const vote of result.docs) {
+            await databaseService.deleteDocument('votes', vote._id, vote._rev);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to clear votes from PouchDB:', err);
+      }
+    }
   };
 
   const value = {
     candidates,
     votes,
     selectedVotes,
+    loading,
+    error,
+    isDbReady,
     castVote,
     hasVoted,
     getVoteForStudent,
@@ -289,7 +585,11 @@ export const CandidatesProvider = ({ children }) => {
     getCandidateById,
     getVotingResults,
     getAvailableCargos,
-    resetAllVotes
+    resetAllVotes,
+    // Database operations
+    initializeCandidatesData,
+    loadCandidatesFromDB,
+    initializeMockCandidates
   };
 
   return (

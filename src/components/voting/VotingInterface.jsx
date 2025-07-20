@@ -11,13 +11,44 @@ const VotingInterface = ({ student, onSubmit }) => {
     selectCandidate, 
     getSelectedCandidate,
     getAvailableCargos,
-    clearSelections
+    clearSelections,
+    loading,
+    error
   } = useCandidates();
+
+  // Debug logging (can be removed in production)
+  // console.log('VotingInterface render:', { student, candidates, selectedVotes, loading, error });
   
   const [currentCargo, setCurrentCargo] = useState('');
   const [isComplete, setIsComplete] = useState(false);
   
   const cargos = getAvailableCargos();
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="voting-interface loading">
+        <div className="loading-screen">
+          <div className="loading-spinner">🔄</div>
+          <h2>Cargando candidatos...</h2>
+          <p>Por favor espere</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="voting-interface error">
+        <div className="error-screen">
+          <div className="error-icon">❌</div>
+          <h2>Error al cargar candidatos</h2>
+          <p>Error: {error}</p>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     // Seleccionar el primer cargo disponible
@@ -123,12 +154,12 @@ const VotingInterface = ({ student, onSubmit }) => {
           </div>
 
           <div className="candidates-grid">
-            {currentCandidates.map(candidate => (
+            {currentCandidates.map((candidate, index) => (
               <CandidateCard
-                key={candidate.id}
+                key={candidate.id || candidate._id || candidate.originalId || `candidate-${index}`}
                 candidate={candidate}
-                isSelected={selectedCandidate === candidate.id}
-                onSelect={() => handleCandidateSelect(candidate.id)}
+                isSelected={selectedCandidate === (candidate.id || candidate._id || candidate.originalId)}
+                onSelect={() => handleCandidateSelect(candidate.id || candidate._id || candidate.originalId)}
               />
             ))}
           </div>

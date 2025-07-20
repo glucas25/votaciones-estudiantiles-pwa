@@ -9,9 +9,12 @@ import './VotingBooth.css';
 
 const VotingBooth = ({ student, onClose, onVoteComplete }) => {
   const { user } = useAuth();
-  const { hasVoted, getAvailableCargos } = useCandidates();
+  const { hasVoted, getAvailableCargos, candidates, loading, error } = useCandidates();
   const [currentStep, setCurrentStep] = useState('voting'); // voting, confirmation, completed
   const [startTime] = useState(new Date());
+
+  // Debug logging (can be removed in production)
+  // console.log('VotingBooth render:', { student, user, candidates, loading, error, currentStep });
 
   // Verificar si el estudiante ya votó
   useEffect(() => {
@@ -44,6 +47,51 @@ const VotingBooth = ({ student, onClose, onVoteComplete }) => {
     const duration = Math.round((now - startTime) / 1000);
     return duration;
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="voting-booth loading">
+        <div className="loading-screen">
+          <div className="loading-spinner">🔄</div>
+          <h2>Cargando sistema de votación...</h2>
+          <p>Por favor espere mientras se cargan los candidatos</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="voting-booth error">
+        <div className="error-screen">
+          <div className="error-icon">❌</div>
+          <h2>Error en el sistema de votación</h2>
+          <p>Error: {error}</p>
+          <button onClick={handleReturn} className="return-btn">
+            ⬅️ Volver al Panel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show if no candidates available
+  if (!candidates || Object.keys(candidates).length === 0) {
+    return (
+      <div className="voting-booth no-candidates">
+        <div className="no-candidates-screen">
+          <div className="warning-icon">⚠️</div>
+          <h2>No hay candidatos disponibles</h2>
+          <p>No se han configurado candidatos para este nivel educativo.</p>
+          <button onClick={handleReturn} className="return-btn">
+            ⬅️ Volver al Panel
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (currentStep === 'completed') {
     return (

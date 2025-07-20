@@ -1,11 +1,9 @@
 // src/services/database.js
 import PouchDB from 'pouchdb'
-import PouchDBFind from 'pouchdb-find'
-import PouchDBQuickSearch from 'pouchdb-quick-search'
 
-// Configure PouchDB with plugins
-PouchDB.plugin(PouchDBFind)
-PouchDB.plugin(PouchDBQuickSearch)
+// Simple PouchDB setup without plugins initially
+// Plugins will be loaded dynamically when needed
+console.log('🔧 Initializing PouchDB service...')
 
 // Database configuration
 const DB_CONFIG = {
@@ -360,26 +358,11 @@ class DatabaseService {
         throw new Error(`Database ${dbName} not found`)
       }
 
-      // Use quick-search for full-text search
-      const result = await this.dbs[dbName].search({
-        query,
-        fields,
-        include_docs: true,
-        limit: 50
-      })
-      
-      return {
-        success: true,
-        docs: result.rows.map(row => row.doc),
-        total: result.total_rows
-      }
-      
-    } catch (error) {
-      // Fallback to regular find if search not available
+      // Always use fallback search method for compatibility
       const fallbackQuery = {
         selector: {
           $or: fields.map(field => ({
-            [field]: { $regex: new RegExp(query, 'i') }
+            [field]: { $regex: `(?i)${query}` }
           }))
         },
         limit: 50
@@ -390,6 +373,15 @@ class DatabaseService {
         success: true,
         docs: result.docs,
         total: result.docs.length
+      }
+      
+    } catch (error) {
+      console.error(`Search failed in ${dbName}:`, error)
+      return {
+        success: false,
+        docs: [],
+        total: 0,
+        error: error.message
       }
     }
   }

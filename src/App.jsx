@@ -3,11 +3,13 @@ import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { StudentsProvider } from './contexts/StudentsContext';
 import { CandidatesProvider } from './contexts/CandidatesContext';
+import { ElectionConfigProvider } from './contexts/ElectionConfigContext';
 import TutorLogin from './components/auth/TutorLogin';
 import AdminLogin from './components/auth/AdminLogin';
 import TutorPanel from './components/tutor/TutorPanel';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import AdminDashboard from './components/admin/AdminDashboard';
+import DatabaseTest from './components/common/DatabaseTest';
 import './App.css';
 
 const AdminPanel = ({ user }) => (
@@ -127,6 +129,9 @@ const HomePage = () => {
             </div>
           </div>
         </div>
+        
+        {/* Temporary Database Test Component */}
+        <DatabaseTest />
       </div>
     </div>
   );
@@ -165,13 +170,19 @@ const AppContent = () => {
 
       <main className="app-main">
         {user.role === 'tutor' && (
+          <ElectionConfigProvider>
           <StudentsProvider>
           <CandidatesProvider>
           <TutorPanel />
           </CandidatesProvider>
           </StudentsProvider>
+          </ElectionConfigProvider>
         )}
-        {user.role === 'admin' && <AdminDashboard />}  {/* ✅ NUEVA LÍNEA */}
+        {user.role === 'admin' && (
+          <ElectionConfigProvider>
+          <AdminDashboard />
+          </ElectionConfigProvider>
+        )}
       </main>
     </div>
   );

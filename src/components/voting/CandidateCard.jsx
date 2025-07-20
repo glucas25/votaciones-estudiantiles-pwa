@@ -6,6 +6,11 @@ const CandidateCard = ({ candidate, isSelected, onSelect }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [imageError, setImageError] = useState(false);
 
+  // Ensure propuestas is always an array
+  const propuestas = Array.isArray(candidate.propuestas) 
+    ? candidate.propuestas 
+    : (candidate.propuestas ? candidate.propuestas.split(',').map(p => p.trim()) : []);
+
   const handleSelect = () => {
     onSelect(candidate.id);
   };
@@ -82,7 +87,7 @@ const CandidateCard = ({ candidate, isSelected, onSelect }) => {
       <div className="candidate-proposals">
         <h4>📋 Propuestas Principales:</h4>
         <ul className="proposals-list">
-          {candidate.propuestas.slice(0, 2).map((propuesta, index) => (
+          {propuestas.slice(0, 2).map((propuesta, index) => (
             <li key={index} className="proposal-item">
               <span className="proposal-bullet" style={{ color: candidate.color }}>•</span>
               {propuesta}
@@ -90,12 +95,12 @@ const CandidateCard = ({ candidate, isSelected, onSelect }) => {
           ))}
         </ul>
         
-        {candidate.propuestas.length > 2 && (
+        {propuestas.length > 2 && (
           <button 
             onClick={toggleDetails}
             className="show-more-btn"
           >
-            {showDetails ? 'Ver menos ▲' : `Ver ${candidate.propuestas.length - 2} propuestas más ▼`}
+            {showDetails ? 'Ver menos ▲' : `Ver ${propuestas.length - 2} propuestas más ▼`}
           </button>
         )}
       </div>
@@ -103,11 +108,11 @@ const CandidateCard = ({ candidate, isSelected, onSelect }) => {
       {/* Detalles expandibles */}
       {showDetails && (
         <div className="candidate-details">
-          {candidate.propuestas.length > 2 && (
+          {propuestas.length > 2 && (
             <div className="all-proposals">
               <h4>📋 Todas las Propuestas:</h4>
               <ul className="proposals-list full">
-                {candidate.propuestas.map((propuesta, index) => (
+                {propuestas.map((propuesta, index) => (
                   <li key={index} className="proposal-item">
                     <span className="proposal-number">{index + 1}.</span>
                     {propuesta}

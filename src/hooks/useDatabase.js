@@ -1,7 +1,6 @@
 // src/hooks/useDatabase.js
 import { useState, useEffect, useCallback } from 'react'
-import databaseService, { DOC_TYPES } from '../services/database.js'
-import migrationService from '../services/migration.js'
+import databaseService, { DOC_TYPES } from '../services/database-indexeddb.js'
 
 /**
  * Main database hook for React components
@@ -15,20 +14,13 @@ export function useDatabase() {
     databases: {},
     performance: {}
   })
-  const [migrationStatus, setMigrationStatus] = useState({
-    needed: false,
-    inProgress: false,
-    completed: false,
-    error: null
-  })
-
-  // Initialize database and check migration status
+  // Initialize database
   useEffect(() => {
     initializeDatabase()
   }, [])
 
   /**
-   * Initialize database and handle migration
+   * Initialize database
    */
   const initializeDatabase = useCallback(async () => {
     try {
@@ -46,20 +38,6 @@ export function useDatabase() {
         })
       }
 
-      // Check if migration is needed
-      const needsMigration = await migrationService.isMigrationNeeded()
-      
-      setMigrationStatus(prev => ({
-        ...prev,
-        needed: needsMigration
-      }))
-
-      // Auto-migrate if needed
-      if (needsMigration) {
-        console.log('🔄 Starting automatic migration from localStorage to PouchDB...')
-        await performMigration()
-      }
-
       // Update connection status
       const status = await databaseService.getConnectionStatus()
       setConnectionStatus(status)
@@ -67,47 +45,15 @@ export function useDatabase() {
 
     } catch (error) {
       console.error('Failed to initialize database:', error)
-      setMigrationStatus(prev => ({
-        ...prev,
-        error: error.message
-      }))
     }
   }, [])
 
   /**
-   * Perform migration from localStorage
+   * Mock migration function for compatibility
    */
   const performMigration = useCallback(async () => {
-    try {
-      setMigrationStatus(prev => ({
-        ...prev,
-        inProgress: true,
-        error: null
-      }))
-
-      const result = await migrationService.startMigration()
-      
-      setMigrationStatus(prev => ({
-        ...prev,
-        inProgress: false,
-        completed: true,
-        needed: false
-      }))
-
-      console.log('✅ Migration completed successfully:', result)
-      
-      // Refresh connection status after migration
-      const status = await databaseService.getConnectionStatus()
-      setConnectionStatus(status)
-
-    } catch (error) {
-      console.error('Migration failed:', error)
-      setMigrationStatus(prev => ({
-        ...prev,
-        inProgress: false,
-        error: error.message
-      }))
-    }
+    console.log('Migration not needed in simplified version')
+    return { success: true }
   }, [])
 
   /**
@@ -174,7 +120,7 @@ export function useDatabase() {
     // Status
     isReady,
     connectionStatus,
-    migrationStatus,
+    migrationStatus: { needed: false, inProgress: false, completed: true, error: null },
     
     // Actions
     refreshStatus,
