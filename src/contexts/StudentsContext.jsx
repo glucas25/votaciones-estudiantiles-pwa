@@ -215,6 +215,105 @@ export const StudentsProvider = ({ children }) => {
     saveStudentStates(resetStates);
   };
 
+  // Mass operations for admin functionality
+  const addStudent = (newStudent) => {
+    const updatedStudents = [...students, newStudent];
+    setStudents(updatedStudents);
+    
+    // Initialize state for new student
+    const newStates = {
+      ...studentStates,
+      [newStudent.id]: {
+        status: 'pending',
+        votedAt: null,
+        isAbsent: false
+      }
+    };
+    setStudentStates(newStates);
+    saveStudentStates(newStates);
+  };
+
+  const updateStudent = (updatedStudent) => {
+    const updatedStudents = students.map(s => 
+      s.id === updatedStudent.id ? updatedStudent : s
+    );
+    setStudents(updatedStudents);
+  };
+
+  const removeStudent = (studentId) => {
+    const updatedStudents = students.filter(s => s.id !== studentId);
+    setStudents(updatedStudents);
+    
+    // Remove from states
+    const newStates = { ...studentStates };
+    delete newStates[studentId];
+    setStudentStates(newStates);
+    saveStudentStates(newStates);
+  };
+
+  const bulkImportStudents = (importedStudents) => {
+    const existingIds = new Set(students.map(s => s.id));
+    const newStudents = importedStudents.filter(s => !existingIds.has(s.id));
+    
+    if (newStudents.length > 0) {
+      const updatedStudents = [...students, ...newStudents];
+      setStudents(updatedStudents);
+      
+      // Initialize states for new students
+      const newStates = { ...studentStates };
+      newStudents.forEach(student => {
+        newStates[student.id] = {
+          status: 'pending',
+          votedAt: null,
+          isAbsent: false
+        };
+      });
+      
+      setStudentStates(newStates);
+      saveStudentStates(newStates);
+    }
+    
+    return newStudents.length;
+  };
+
+  const bulkUpdateStatus = (studentIds, newStatus) => {
+    const newStates = { ...studentStates };
+    studentIds.forEach(id => {
+      if (newStates[id]) {
+        newStates[id] = {
+          ...newStates[id],
+          status: newStatus,
+          votedAt: newStatus === 'voted' ? new Date().toISOString() : null,
+          isAbsent: newStatus === 'absent'
+        };
+      }
+    });
+    
+    setStudentStates(newStates);
+    saveStudentStates(newStates);
+  };
+
+  const getStudentsByLevel = (level) => {
+    return students.filter(student => student.nivel === level);
+  };
+
+  const getStudentsByCourse = (course) => {
+    return students.filter(student => student.curso === course);
+  };
+
+  const searchStudents = (term) => {
+    if (!term) return students;
+    
+    const lowerTerm = term.toLowerCase();
+    return students.filter(student => 
+      student.nombres?.toLowerCase().includes(lowerTerm) ||
+      student.apellidos?.toLowerCase().includes(lowerTerm) ||
+      student.cedula?.includes(term) ||
+      student.curso?.toLowerCase().includes(lowerTerm) ||
+      `${student.nombres} ${student.apellidos}`.toLowerCase().includes(lowerTerm)
+    );
+  };
+
   const value = {
     students,
     studentStates,
@@ -228,7 +327,16 @@ export const StudentsProvider = ({ children }) => {
     getFilteredStudents,
     getStudentsByStatus,
     getStats,
-    resetAllVotes
+    resetAllVotes,
+    // Mass operations
+    addStudent,
+    updateStudent,
+    removeStudent,
+    bulkImportStudents,
+    bulkUpdateStatus,
+    getStudentsByLevel,
+    getStudentsByCourse,
+    searchStudents
   };
 
   return (

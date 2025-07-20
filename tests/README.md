@@ -1,121 +1,146 @@
 # Testing Documentation
 
-This directory contains the comprehensive testing suite for the Student Voting System PWA.
+Este directorio contiene la suite completa de testing para el Sistema de Votación Estudiantil PWA.
 
-## Test Structure
+## Estructura de Tests
 
 ```
 tests/
-├── unit/                    # Unit tests
-│   ├── services/           # Service layer tests
-│   ├── contexts/           # React Context tests
-│   ├── hooks/              # Custom hooks tests
-│   └── components/         # Component tests
-│       ├── auth/           # Authentication components
-│       ├── tutor/          # Tutor module components
-│       ├── admin/          # Admin module components
-│       ├── common/         # Shared components
-│       └── voting/         # Voting interface components
-├── integration/            # Integration tests
-└── e2e/                   # End-to-end tests
+├── unit/                    # Tests unitarios
+│   ├── services/           # Tests de servicios
+│   │   ├── database.test.js
+│   │   └── auth.test.js
+│   ├── contexts/           # Tests de contextos React
+│   │   └── AuthContext.test.jsx
+│   ├── hooks/              # Tests de hooks personalizados
+│   │   └── useAuth.test.jsx
+│   └── components/         # Tests de componentes
+│       ├── auth/           # Componentes de autenticación
+│       │   ├── AdminLogin.test.jsx
+│       │   ├── TutorLogin.test.jsx
+│       │   └── ProtectedRoute.test.jsx
+│       ├── common/         # Componentes compartidos
+│       │   └── ConnectionStatus.test.jsx
+│       └── tutor/          # Componentes del tutor
+│           └── StudentCard.test.jsx
+├── integration/            # Tests de integración
+│   └── auth-flow.test.jsx
+└── e2e/                   # Tests end-to-end
+    ├── auth.spec.js
+    └── tutor-panel.spec.js
 ```
 
-## Test Types
+## Tipos de Tests
 
-### Unit Tests (`tests/unit/`)
-- **Services**: Database operations, authentication logic
-- **Contexts**: React Context providers and state management
-- **Hooks**: Custom hook behavior and side effects
-- **Components**: Individual component functionality and rendering
+### Tests Unitarios (`tests/unit/`)
+- **Servicios**: Operaciones de base de datos, lógica de autenticación
+- **Contextos**: Proveedores de React Context y gestión de estado
+- **Hooks**: Comportamiento de hooks personalizados y efectos secundarios
+- **Componentes**: Funcionalidad individual y renderizado de componentes
 
-### Integration Tests (`tests/integration/`)
-- **Auth Flow**: Complete authentication workflows
-- **Data Flow**: Context and service interactions
-- **User Journeys**: Multi-component user interactions
+### Tests de Integración (`tests/integration/`)
+- **Flujos de Autenticación**: Workflows completos de autenticación
+- **Flujos de Datos**: Interacciones entre contextos y servicios
+- **Journeys de Usuario**: Interacciones multi-componente
 
-### End-to-End Tests (`tests/e2e/`)
-- **Authentication**: Login/logout flows across all roles
-- **Tutor Panel**: Complete tutor workflow testing
-- **Admin Panel**: Administrative functionality testing
+### Tests End-to-End (`tests/e2e/`)
+- **Autenticación**: Flujos de login/logout en todos los roles
+- **Panel del Tutor**: Testing completo del workflow del tutor
+- **Panel de Admin**: Testing de funcionalidad administrativa
 - **Cross-browser**: Chrome, Firefox, Safari, Mobile
 
-## Running Tests
+## Ejecutar Tests
 
-### Unit and Integration Tests (Vitest)
+### Tests Unitarios e Integración (Vitest)
 ```bash
-# Run all tests
+# Ejecutar todos los tests
 npm test
 
-# Run tests in watch mode
-npm run test
+# Ejecutar tests en modo watch
+npm run test:watch
 
-# Run tests with UI
+# Ejecutar tests con UI
 npm run test:ui
 
-# Run tests once with coverage
+# Ejecutar tests una vez con coverage
 npm run test:coverage
 
-# Run specific test file
+# Ejecutar tests unitarios específicos
+npm run test:unit
+
+# Ejecutar tests de integración específicos
+npm run test:integration
+
+# Ejecutar archivo de test específico
 npm test auth.test.js
 
-# Run tests matching pattern
+# Ejecutar tests que coincidan con un patrón
 npm test -- --grep "authentication"
 ```
 
-### End-to-End Tests (Playwright)
+### Tests End-to-End (Playwright)
 ```bash
-# Run E2E tests
+# Ejecutar tests E2E
 npm run test:e2e
 
-# Run E2E tests with UI
+# Ejecutar tests E2E con UI
 npm run test:e2e:ui
 
-# Run specific browser
+# Ejecutar tests E2E en modo headed
+npm run test:e2e:headed
+
+# Ejecutar navegador específico
 npx playwright test --project=chromium
 
-# Run specific test file
+# Ejecutar archivo de test específico
 npx playwright test auth.spec.js
 
-# Run in headed mode (see browser)
-npx playwright test --headed
-
-# Debug mode
+# Ejecutar en modo debug
 npx playwright test --debug
 ```
 
-## Test Configuration
+### Ejecutar Todos los Tests
+```bash
+# Ejecutar tests unitarios, integración y E2E
+npm run test:all
 
-### Vitest Configuration (`vitest.config.js`)
-- **Environment**: jsdom for React component testing
-- **Setup**: Global test setup and mocks
-- **Coverage**: Text, JSON, and HTML reports
-- **Globals**: Global test functions available
+# Generar reporte completo
+npm run test:report
+```
 
-### Playwright Configuration (`playwright.config.js`)
-- **Browsers**: Chromium, Firefox, WebKit
+## Configuración de Tests
+
+### Configuración de Vitest (`vitest.config.js`)
+- **Environment**: jsdom para testing de componentes React
+- **Setup**: Configuración global y mocks
+- **Coverage**: Reportes en texto, JSON y HTML
+- **Globals**: Funciones de test disponibles globalmente
+
+### Configuración de Playwright (`playwright.config.js`)
+- **Navegadores**: Chromium, Firefox, WebKit
 - **Mobile**: iOS Safari, Android Chrome
-- **Reporting**: HTML and JSON reports
-- **Screenshots**: On failure
-- **Video**: Retain on failure
+- **Reporting**: Reportes HTML y JSON
+- **Screenshots**: En caso de fallo
+- **Video**: Retener en caso de fallo
 
-## Test Utilities
+## Utilidades de Test
 
 ### `src/test/setup.js`
-- Global test setup
-- PouchDB mocking
-- LocalStorage mocking
-- Navigation mocking
+- Configuración global de tests
+- Mocks de PouchDB
+- Mocks de LocalStorage
+- Mocks de navegación
 
 ### `src/test/utils.jsx`
-- `renderWithProviders()`: Renders components with contexts
-- Mock data for users, students, candidates
-- Test helper functions
+- `renderWithProviders()`: Renderiza componentes con contextos
+- Datos mock para usuarios, estudiantes, candidatos
+- Funciones helper para tests
 
-## Writing Tests
+## Escribir Tests
 
-### Unit Test Example
+### Ejemplo de Test Unitario
 ```javascript
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import MyComponent from './MyComponent'
@@ -128,7 +153,7 @@ describe('MyComponent', () => {
 })
 ```
 
-### E2E Test Example
+### Ejemplo de Test E2E
 ```javascript
 import { test, expect } from '@playwright/test'
 
@@ -143,24 +168,24 @@ test('should login successfully', async ({ page }) => {
 })
 ```
 
-## Test Coverage
+## Cobertura de Tests
 
-The test suite aims for comprehensive coverage:
+La suite de tests apunta a una cobertura comprehensiva:
 
-- **Unit Tests**: 90%+ code coverage
-- **Integration Tests**: Critical user flows
-- **E2E Tests**: Core functionality across browsers
+- **Tests Unitarios**: 90%+ cobertura de código
+- **Tests de Integración**: Flujos críticos de usuario
+- **Tests E2E**: Funcionalidad core a través de navegadores
 
-### Coverage Reports
-- Generated in `coverage/` directory
-- HTML report at `coverage/index.html`
-- JSON report for CI/CD integration
+### Reportes de Cobertura
+- Generados en directorio `coverage/`
+- Reporte HTML en `coverage/index.html`
+- Reporte JSON para integración CI/CD
 
-## Continuous Integration
+## Integración Continua
 
-Tests are designed to run in CI/CD environments:
+Los tests están diseñados para ejecutarse en entornos CI/CD:
 
-### GitHub Actions Example
+### Ejemplo GitHub Actions
 ```yaml
 - name: Run Tests
   run: |
@@ -168,95 +193,109 @@ Tests are designed to run in CI/CD environments:
     npm run test:e2e
 ```
 
-### Test Artifacts
-- Test results: JSON format
-- Screenshots: Failure artifacts
-- Videos: E2E test recordings
-- Coverage reports: HTML/JSON
+### Artefactos de Test
+- Resultados de tests: Formato JSON
+- Screenshots: Artefactos de fallo
+- Videos: Grabaciones de tests E2E
+- Reportes de cobertura: HTML/JSON
 
-## Mocking Strategy
+## Estrategia de Mocking
 
-### Service Mocks
-- **PouchDB**: Mocked for consistent test data
-- **Auth Service**: Mocked for controlled login states
-- **LocalStorage**: Mocked for session testing
+### Mocks de Servicios
+- **PouchDB**: Mocked para datos de test consistentes
+- **Auth Service**: Mocked para estados de login controlados
+- **LocalStorage**: Mocked para testing de sesiones
 
-### Component Mocks
-- **External dependencies**: Chart libraries, PDF generators
-- **Browser APIs**: File API, Notifications
-- **Time-dependent functions**: Date.now(), timers
+### Mocks de Componentes
+- **Dependencias externas**: Librerías de charts, generadores PDF
+- **APIs del navegador**: File API, Notifications
+- **Funciones dependientes del tiempo**: Date.now(), timers
 
-## Best Practices
+## Mejores Prácticas
 
-### Unit Tests
-- Test one thing at a time
-- Use descriptive test names
-- Mock external dependencies
-- Test both success and error cases
+### Tests Unitarios
+- Testear una cosa a la vez
+- Usar nombres de test descriptivos
+- Mockear dependencias externas
+- Testear casos de éxito y error
 
-### Integration Tests
-- Test real user workflows
-- Use minimal mocking
-- Focus on component interactions
-- Verify data flow between layers
+### Tests de Integración
+- Testear workflows reales de usuario
+- Usar mocking mínimo
+- Enfocarse en interacciones entre componentes
+- Verificar flujo de datos entre capas
 
-### E2E Tests
-- Test critical user journeys
-- Use page object patterns
-- Handle async operations properly
-- Test across different browsers/devices
+### Tests E2E
+- Testear journeys críticos de usuario
+- Usar patrones page object
+- Manejar operaciones async correctamente
+- Testear a través de diferentes navegadores/dispositivos
 
 ## Debugging Tests
 
-### Unit/Integration Tests
+### Tests Unitarios/Integración
 ```bash
-# Debug with Node inspector
-npm test -- --inspect-brk
+# Debug con Node inspector
+node --inspect-brk node_modules/.bin/vitest
 
-# Run single test file
-npm test MyComponent.test.js
-
-# Run with verbose output
-npm test -- --verbose
+# Debug con Chrome DevTools
+npm run test:debug
 ```
 
-### E2E Tests
+### Tests E2E
 ```bash
-# Run in debug mode
+# Ejecutar en modo headed
+npx playwright test --headed
+
+# Debug con Playwright Inspector
 npx playwright test --debug
 
-# Run with UI mode
-npx playwright test --ui
-
-# Record new tests
-npx playwright codegen localhost:3000
+# Ejecutar con trace
+npx playwright test --trace on
 ```
 
-## Performance Testing
+## Troubleshooting
 
-### Load Testing Considerations
-- Database operations under load
-- Multiple concurrent users
-- Memory leak detection
-- Bundle size optimization
+### Problemas Comunes
 
-### Metrics Tracked
-- Test execution time
-- Component render time
-- Database query performance
-- Page load speed (E2E)
+1. **Tests fallando por timing**
+   - Usar `waitFor()` para operaciones async
+   - Aumentar timeouts cuando sea necesario
 
-## Maintenance
+2. **Mocks no funcionando**
+   - Verificar que los mocks están en el setup correcto
+   - Limpiar mocks entre tests
 
-### Regular Tasks
-- Update test data fixtures
-- Review and update mocks
-- Maintain test documentation
-- Monitor test performance
-- Update browser versions
+3. **Tests E2E flaky**
+   - Usar selectores robustos
+   - Esperar por elementos antes de interactuar
+   - Evitar dependencias de timing
 
-### Test Reliability
-- Avoid flaky tests
-- Use proper wait conditions
-- Handle timing issues
-- Maintain stable test data
+### Comandos de Debug
+```bash
+# Ver logs detallados
+npm test -- --verbose
+
+# Ejecutar test específico
+npm test -- --grep "test name"
+
+# Ver coverage detallado
+npm run test:coverage -- --reporter=verbose
+```
+
+## Mantenimiento
+
+### Actualizar Mocks
+- Revisar mocks cuando cambien las APIs
+- Mantener mocks sincronizados con implementación real
+- Documentar cambios en mocks
+
+### Agregar Nuevos Tests
+- Seguir la estructura de directorios existente
+- Usar naming conventions consistentes
+- Agregar tests para nueva funcionalidad
+
+### Performance
+- Ejecutar tests en paralelo cuando sea posible
+- Optimizar mocks para velocidad
+- Usar test data factories para datos consistentes

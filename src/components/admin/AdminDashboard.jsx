@@ -1,5 +1,6 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import StudentManager from './StudentManager';
 import './AdminDashboard.css';
 
 // Contexto para datos de administración
@@ -94,14 +95,141 @@ const participationByLevel = [
   { level: 'Bachillerato', voted: 160, total: 220, percentage: 72.7 }
 ];
 
+// Mock data para estudiantes
+const mockStudents = [
+  {
+    id: 'student_001',
+    cedula: '1234567890',
+    nombres: 'Ana María',
+    apellidos: 'González Pérez',
+    curso: '1ro Bach A',
+    nivel: 'BACHILLERATO',
+    año: 2024,
+    status: 'pending',
+    created: '2024-03-01T08:00:00Z'
+  },
+  {
+    id: 'student_002', 
+    cedula: '1234567891',
+    nombres: 'Carlos Eduardo',
+    apellidos: 'Martínez Silva',
+    curso: '1ro Bach A',
+    nivel: 'BACHILLERATO',
+    año: 2024,
+    status: 'voted',
+    created: '2024-03-01T08:00:00Z'
+  },
+  {
+    id: 'student_003',
+    cedula: '1234567892',
+    nombres: 'María José',
+    apellidos: 'López Torres',
+    curso: '8vo A',
+    nivel: 'BASICA_SUPERIOR',
+    año: 2024,
+    status: 'pending',
+    created: '2024-03-01T08:00:00Z'
+  },
+  {
+    id: 'student_004',
+    cedula: '1234567893',
+    nombres: 'Diego Fernando',
+    apellidos: 'Rodríguez Vega',
+    curso: '2do Bach A',
+    nivel: 'BACHILLERATO',
+    año: 2024,
+    status: 'pending',
+    created: '2024-03-01T08:00:00Z'
+  },
+  {
+    id: 'student_005',
+    cedula: '1234567894',
+    nombres: 'Isabella Sofia',
+    apellidos: 'Castro Morales',
+    curso: '1ro Bach B',
+    nivel: 'BACHILLERATO',
+    año: 2024,
+    status: 'voted',
+    created: '2024-03-01T08:00:00Z'
+  },
+  {
+    id: 'student_006',
+    cedula: '1234567895',
+    nombres: 'Sebastián David',
+    apellidos: 'Herrera Luna',
+    curso: '3ro Bach A',
+    nivel: 'BACHILLERATO',
+    año: 2024,
+    status: 'absent',
+    created: '2024-03-01T08:00:00Z'
+  },
+  {
+    id: 'student_007',
+    cedula: '1234567896',
+    nombres: 'Valentina Andrea',
+    apellidos: 'Vargas Ruiz',
+    curso: '9no A',
+    nivel: 'BASICA_SUPERIOR',
+    año: 2024,
+    status: 'pending',
+    created: '2024-03-01T08:00:00Z'
+  },
+  {
+    id: 'student_008',
+    cedula: '1234567897',
+    nombres: 'Mateo Alejandro',
+    apellidos: 'Jiménez Castro',
+    curso: '10mo B',
+    nivel: 'BASICA_SUPERIOR',
+    año: 2024,
+    status: 'voted',
+    created: '2024-03-01T08:00:00Z'
+  }
+];
+
 // Componente principal del Dashboard
 function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [candidates, setCandidates] = useState(mockCandidates);
+  const [students, setStudents] = useState(mockStudents);
   const [stats, setStats] = useState(mockStats);
 
+  // Student management functions
+  const handleStudentAdd = (newStudent) => {
+    setStudents([...students, { ...newStudent, id: `student_${Date.now()}` }]);
+  };
+
+  const handleStudentUpdate = (updatedStudent) => {
+    setStudents(students.map(s => s.id === updatedStudent.id ? updatedStudent : s));
+  };
+
+  const handleStudentDelete = (studentId) => {
+    setStudents(students.filter(s => s.id !== studentId));
+  };
+
+  const handleBulkImport = (importedStudents) => {
+    console.log('📊 Importing students:', importedStudents);
+    const studentsWithIds = importedStudents.map((student, index) => ({
+      ...student,
+      id: student.id || `student_${Date.now()}_${index}`,
+      created: student.created || new Date().toISOString()
+    }));
+    
+    const updatedStudents = [...students, ...studentsWithIds];
+    console.log('✅ Updated students list:', updatedStudents);
+    setStudents(updatedStudents);
+  };
+
   return (
-    <AdminContext.Provider value={{ candidates, setCandidates, stats, setStats }}>
+    <AdminContext.Provider value={{ 
+      candidates, setCandidates, 
+      students, setStudents,
+      stats, setStats,
+      handleStudentAdd,
+      handleStudentUpdate, 
+      handleStudentDelete,
+      handleBulkImport
+    }}>
       <div className="admin-container">
         {/* Header */}
         <header className="admin-header">
@@ -119,6 +247,12 @@ function AdminDashboard() {
             onClick={() => setActiveTab('dashboard')}
           >
             📊 Dashboard
+          </button>
+          <button 
+            className={activeTab === 'students' ? 'active' : ''}
+            onClick={() => setActiveTab('students')}
+          >
+            👥 Estudiantes
           </button>
           <button 
             className={activeTab === 'candidates' ? 'active' : ''}
@@ -143,6 +277,7 @@ function AdminDashboard() {
         {/* Content */}
         <main className="admin-content">
           {activeTab === 'dashboard' && <DashboardTab />}
+          {activeTab === 'students' && <StudentsTab />}
           {activeTab === 'candidates' && <CandidatesTab />}
           {activeTab === 'reports' && <ReportsTab />}
           {activeTab === 'config' && <ConfigTab />}
@@ -312,6 +447,29 @@ function ParticipationStats() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// Tab de gestión de estudiantes
+function StudentsTab() {
+  const { 
+    students, 
+    handleStudentAdd, 
+    handleStudentUpdate, 
+    handleStudentDelete, 
+    handleBulkImport 
+  } = useContext(AdminContext);
+
+  return (
+    <div className="students-tab">
+      <StudentManager
+        students={students}
+        onStudentAdd={handleStudentAdd}
+        onStudentUpdate={handleStudentUpdate}
+        onStudentDelete={handleStudentDelete}
+        onBulkImport={handleBulkImport}
+      />
     </div>
   );
 }
@@ -616,6 +774,55 @@ function ReportsTab() {
 
 // Tab de configuración
 function ConfigTab() {
+  const { students, setStudents } = useContext(AdminContext);
+
+  const handleNewElection = async () => {
+    const confirmMessage = `🚨 CONFIRMACIÓN REQUERIDA 🚨
+
+¿Está completamente seguro de que desea iniciar una nueva elección?
+
+Esta acción:
+• Eliminará TODOS los estudiantes actuales
+• Eliminará TODOS los votos registrados
+• Eliminará TODOS los candidatos
+• Reiniciará todas las estadísticas
+• NO se puede deshacer
+
+Escriba "CONFIRMAR" para proceder:`;
+
+    const userConfirmation = prompt(confirmMessage);
+    
+    if (userConfirmation === "CONFIRMAR") {
+      try {
+        // Reset all data
+        setStudents([]);
+        
+        // Clear localStorage data
+        Object.keys(localStorage).forEach(key => {
+          if (key.includes('student_states_') || 
+              key.includes('votaciones_') || 
+              key.includes('election_')) {
+            localStorage.removeItem(key);
+          }
+        });
+
+        // Show success message
+        alert('✅ Nueva elección iniciada exitosamente. Todos los datos han sido eliminados.');
+        
+        // Optionally reload the page to ensure clean state
+        if (window.confirm('¿Desea recargar la página para asegurar un estado completamente limpio?')) {
+          window.location.reload();
+        }
+        
+      } catch (error) {
+        console.error('Error al iniciar nueva elección:', error);
+        alert('❌ Error al iniciar nueva elección. Por favor, intente nuevamente.');
+      }
+    } else if (userConfirmation !== null) {
+      alert('❌ Confirmación incorrecta. La nueva elección no se ha iniciado.');
+    }
+  };
+
   return (
     <div className="config-tab">
       <h2>⚙️ CONFIGURACIÓN DEL SISTEMA</h2>
@@ -682,6 +889,23 @@ function ConfigTab() {
             <button className="btn-backup">💾 Crear Backup</button>
             <button className="btn-restore">📥 Restaurar Backup</button>
             <button className="btn-export">📤 Exportar Datos</button>
+          </div>
+        </div>
+
+        <div className="config-section">
+          <h3>🔄 Nueva Elección</h3>
+          <div className="election-reset">
+            <div className="warning-box">
+              <h4>⚠️ ADVERTENCIA</h4>
+              <p>Esta acción eliminará todos los datos de votación actuales y reiniciará el sistema para una nueva elección.</p>
+              <p><strong>Los datos eliminados NO se pueden recuperar.</strong></p>
+            </div>
+            <button 
+              className="btn-danger-large"
+              onClick={() => handleNewElection()}
+            >
+              🗳️ Iniciar Nueva Elección
+            </button>
           </div>
         </div>
       </div>

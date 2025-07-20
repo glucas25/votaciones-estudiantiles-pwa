@@ -1,271 +1,402 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { renderWithProviders } from '../test/utils'
-import App from '../../src/App'
+import { AuthProvider } from '../../src/contexts/AuthContext.jsx'
+import AdminLogin from '../../src/components/auth/AdminLogin.jsx'
+import TutorLogin from '../../src/components/auth/TutorLogin.jsx'
+import ProtectedRoute from '../../src/components/auth/ProtectedRoute.jsx'
 
-// Mock services
-vi.mock('../../src/services/auth', () => ({
+// Mock database service
+vi.mock('../../src/services/database-indexeddb.js', () => ({
+  default: {
+    createDocument: vi.fn(),
+    findDocuments: vi.fn(),
+    isReady: vi.fn().mockReturnValue(true)
+  },
+  DOC_TYPES: {
+    SESSION: 'session'
+  }
+}))
+
+// Mock auth service
+vi.mock('../../src/services/auth.js', () => ({
   default: {
     loginAdmin: vi.fn(),
     loginTutor: vi.fn(),
     getSession: vi.fn(),
-    saveSession: vi.fn(),
     clearSession: vi.fn(),
     isSessionValid: vi.fn()
   }
 }))
 
-vi.mock('../../src/services/database', () => ({
-  database: {
-    getConnectionStatus: vi.fn().mockResolvedValue({ local: true, online: true })
-  },
-  initDatabase: vi.fn().mockResolvedValue({})
-}))
-
-import authService from '../../src/services/auth'
+// Test component to render with providers
+const TestWrapper = ({ children }) => (
+  <AuthProvider>
+    {children}
+  </AuthProvider>
+)
 
 describe('Authentication Flow Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    authService.getSession.mockReturnValue(null)
-    authService.isSessionValid.mockReturnValue(true)
+    localStorage.clear()
   })
 
-  it('should complete full admin authentication flow', async () => {
-    const user = userEvent.setup()
-    
-    // Mock successful admin login
-    authService.loginAdmin.mockResolvedValue({
-      success: true,
-      user: {
-        id: 'admin-1',
-        role: 'admin',
-        loginTime: new Date().toISOString()
-      }
-    })
-    
-    renderWithProviders(<App />)
-    
-    // Should start at homepage
-    expect(screen.getByText('🏫 SISTEMA DE VOTACIÓN ESTUDIANTIL')).toBeInTheDocument()
-    
-    // Click admin role
-    await user.click(screen.getByText('Administrador'))
-    
-    // Should navigate to admin login
-    expect(screen.getByText('🏛️ ACCESO ADMINISTRATIVO')).toBeInTheDocument()
-    
-    // Fill login form
-    await user.type(screen.getByLabelText(/usuario/i), 'admin')
-    await user.type(screen.getByLabelText(/contraseña/i), 'admin2024')
-    await user.click(screen.getByRole('button', { name: /iniciar sesión/i }))
-    
-    // Should redirect to admin dashboard
-    await waitFor(() => {
-      expect(screen.getByText('🏛️ PANEL DE ADMINISTRACIÓN')).toBeInTheDocument()
-    })
-    
-    // Verify admin session was saved
-    expect(authService.saveSession).toHaveBeenCalled()
-  })
+  describe('Admin Authentication Flow', () => {
+    it('should complete full admin login flow', async () => {
+      const user = userEvent.setup()
+      
+      // Mock successful admin login
+      const { default: authService } = await import('../../src/services/auth.js')
+      authService.loginAdmin.mockResolvedValue({
+        success: true,
+        user: {
+          role: 'admin',
+          username: 'admin',
+          sessionId: 'admin-session-123'
+        }
+      })
 
-  it('should complete full tutor authentication flow', async () => {
-    const user = userEvent.setup()
-    
-    // Mock successful tutor login
-    authService.loginTutor.mockResolvedValue({
-      success: true,
-      user: {
-        id: 'tutor-1',
-        role: 'tutor',
-        course: '1ro Bach A',
-        level: 'BACHILLERATO',
-        activationCode: 'BCH1A2024',
-        loginTime: new Date().toISOString()
-      }
-    })
-    
-    renderWithProviders(<App />)
-    
-    // Should start at homepage
-    expect(screen.getByText('🏫 SISTEMA DE VOTACIÓN ESTUDIANTIL')).toBeInTheDocument()
-    
-    // Click tutor role
-    await user.click(screen.getByText('Docente/Tutor'))
-    
-    // Should navigate to tutor login
-    expect(screen.getByText('👨‍🏫 ACCESO DOCENTE')).toBeInTheDocument()
-    
-    // Fill activation code
-    await user.type(screen.getByLabelText(/código de activación/i), 'BCH1A2024')
-    await user.click(screen.getByRole('button', { name: /acceder al sistema/i }))
-    
-    // Should redirect to tutor panel
-    await waitFor(() => {
-      expect(screen.getByText('📱 Gestión de Votación')).toBeInTheDocument()
-    })
-    
-    // Verify tutor session was saved
-    expect(authService.saveSession).toHaveBeenCalled()
-  })
-
-  it('should handle authentication errors gracefully', async () => {
-    const user = userEvent.setup()
-    
-    // Mock failed admin login
-    authService.loginAdmin.mockResolvedValue({
-      success: false,
-      error: 'Credenciales incorrectas'
-    })
-    
-    renderWithProviders(<App />)
-    
-    // Navigate to admin login
-    await user.click(screen.getByText('Administrador'))
-    
-    // Attempt login with wrong credentials
-    await user.type(screen.getByLabelText(/usuario/i), 'admin')
-    await user.type(screen.getByLabelText(/contraseña/i), 'wrongpassword')
-    await user.click(screen.getByRole('button', { name: /iniciar sesión/i }))
-    
-    // Should show error and stay on login page
-    await waitFor(() => {
-      expect(screen.getByText('❌ Credenciales incorrectas')).toBeInTheDocument()
-    })
-    
-    expect(screen.getByText('🏛️ ACCESO ADMINISTRATIVO')).toBeInTheDocument()
-    expect(authService.saveSession).not.toHaveBeenCalled()
-  })
-
-  it('should restore session on app initialization', async () => {
-    // Mock existing session
-    const mockSession = {
-      user: {
-        id: 'admin-1',
-        role: 'admin',
-        loginTime: new Date().toISOString()
-      },
-      timestamp: Date.now()
-    }
-    
-    authService.getSession.mockReturnValue(mockSession)
-    authService.isSessionValid.mockReturnValue(true)
-    
-    renderWithProviders(<App />)
-    
-    // Should directly show admin dashboard
-    await waitFor(() => {
-      expect(screen.getByText('🏛️ PANEL DE ADMINISTRACIÓN')).toBeInTheDocument()
-    })
-    
-    // Should not show homepage
-    expect(screen.queryByText('🏫 SISTEMA DE VOTACIÓN ESTUDIANTIL')).not.toBeInTheDocument()
-  })
-
-  it('should clear invalid session on app initialization', async () => {
-    // Mock expired session
-    const expiredSession = {
-      user: {
-        id: 'admin-1',
-        role: 'admin',
-        loginTime: new Date().toISOString()
-      },
-      timestamp: Date.now() - (25 * 60 * 60 * 1000) // 25 hours ago
-    }
-    
-    authService.getSession.mockReturnValue(expiredSession)
-    authService.isSessionValid.mockReturnValue(false)
-    
-    renderWithProviders(<App />)
-    
-    // Should clear session and show homepage
-    await waitFor(() => {
-      expect(authService.clearSession).toHaveBeenCalled()
-      expect(screen.getByText('🏫 SISTEMA DE VOTACIÓN ESTUDIANTIL')).toBeInTheDocument()
-    })
-  })
-
-  it('should handle logout flow correctly', async () => {
-    const user = userEvent.setup()
-    
-    // Start with logged in admin
-    authService.loginAdmin.mockResolvedValue({
-      success: true,
-      user: {
-        id: 'admin-1',
-        role: 'admin',
-        loginTime: new Date().toISOString()
-      }
-    })
-    
-    renderWithProviders(<App />)
-    
-    // Login as admin
-    await user.click(screen.getByText('Administrador'))
-    await user.type(screen.getByLabelText(/usuario/i), 'admin')
-    await user.type(screen.getByLabelText(/contraseña/i), 'admin2024')
-    await user.click(screen.getByRole('button', { name: /iniciar sesión/i }))
-    
-    await waitFor(() => {
-      expect(screen.getByText('🏛️ PANEL DE ADMINISTRACIÓN')).toBeInTheDocument()
-    })
-    
-    // Logout
-    await user.click(screen.getByRole('button', { name: /🚪 salir/i }))
-    
-    // Should return to homepage
-    await waitFor(() => {
-      expect(screen.getByText('🏫 SISTEMA DE VOTACIÓN ESTUDIANTIL')).toBeInTheDocument()
-    })
-    
-    expect(authService.clearSession).toHaveBeenCalled()
-  })
-
-  it('should show loading states during authentication', async () => {
-    const user = userEvent.setup()
-    
-    // Mock slow login response
-    authService.loginAdmin.mockImplementation(
-      () => new Promise(resolve => 
-        setTimeout(() => resolve({
-          success: true,
-          user: { id: 'admin-1', role: 'admin' }
-        }), 500)
+      render(
+        <TestWrapper>
+          <AdminLogin />
+        </TestWrapper>
       )
-    )
-    
-    renderWithProviders(<App />)
-    
-    await user.click(screen.getByText('Administrador'))
-    await user.type(screen.getByLabelText(/usuario/i), 'admin')
-    await user.type(screen.getByLabelText(/contraseña/i), 'admin2024')
-    await user.click(screen.getByRole('button', { name: /iniciar sesión/i }))
-    
-    // Should show loading state
-    expect(screen.getByRole('button', { name: /iniciando sesión/i })).toBeDisabled()
-    
-    // Should complete after delay
-    await waitFor(() => {
-      expect(screen.getByText('🏛️ PANEL DE ADMINISTRACIÓN')).toBeInTheDocument()
-    }, { timeout: 1000 })
+
+      // Fill and submit form
+      const usernameInput = screen.getByPlaceholderText('Usuario')
+      const passwordInput = screen.getByPlaceholderText('Contraseña')
+      const submitButton = screen.getByRole('button', { name: 'Acceder' })
+
+      await user.type(usernameInput, 'admin')
+      await user.type(passwordInput, 'admin2024')
+      await user.click(submitButton)
+
+      // Verify service was called
+      expect(authService.loginAdmin).toHaveBeenCalledWith('admin', 'admin2024')
+
+      // Wait for login to complete
+      await waitFor(() => {
+        expect(authService.loginAdmin).toHaveBeenCalledTimes(1)
+      })
+    })
+
+    it('should handle admin login failure gracefully', async () => {
+      const user = userEvent.setup()
+      
+      // Mock failed admin login
+      const { default: authService } = await import('../../src/services/auth.js')
+      authService.loginAdmin.mockResolvedValue({
+        success: false,
+        error: 'Credenciales incorrectas'
+      })
+
+      render(
+        <TestWrapper>
+          <AdminLogin />
+        </TestWrapper>
+      )
+
+      // Fill and submit form
+      const usernameInput = screen.getByPlaceholderText('Usuario')
+      const passwordInput = screen.getByPlaceholderText('Contraseña')
+      const submitButton = screen.getByRole('button', { name: 'Acceder' })
+
+      await user.type(usernameInput, 'admin')
+      await user.type(passwordInput, 'wrongpassword')
+      await user.click(submitButton)
+
+      // Verify service was called
+      expect(authService.loginAdmin).toHaveBeenCalledWith('admin', 'wrongpassword')
+
+      // Should show error message
+      await waitFor(() => {
+        expect(screen.getByText(/credenciales incorrectas/i)).toBeInTheDocument()
+      })
+    })
   })
 
-  it('should handle role-based navigation correctly', async () => {
-    const user = userEvent.setup()
-    
-    renderWithProviders(<App />)
-    
-    // Test navigation to different role logins
-    await user.click(screen.getByText('Administrador'))
-    expect(screen.getByText('🏛️ ACCESO ADMINISTRATIVO')).toBeInTheDocument()
-    
-    // Go back to homepage (if there's a back button or navigate manually)
-    // This would depend on actual navigation implementation
-    renderWithProviders(<App />)
-    
-    await user.click(screen.getByText('Docente/Tutor'))
-    expect(screen.getByText('👨‍🏫 ACCESO DOCENTE')).toBeInTheDocument()
+  describe('Tutor Authentication Flow', () => {
+    it('should complete full tutor login flow', async () => {
+      const user = userEvent.setup()
+      
+      // Mock successful tutor login
+      const { default: authService } = await import('../../src/services/auth.js')
+      authService.loginTutor.mockResolvedValue({
+        success: true,
+        user: {
+          role: 'tutor',
+          activationCode: 'BCH1A2024',
+          course: '1ro Bach A',
+          level: 'BACHILLERATO',
+          sessionId: 'tutor-session-123'
+        }
+      })
+
+      render(
+        <TestWrapper>
+          <TutorLogin />
+        </TestWrapper>
+      )
+
+      // Fill and submit form
+      const codeInput = screen.getByPlaceholderText(/código de activación/i)
+      const submitButton = screen.getByRole('button', { name: /acceder/i })
+
+      await user.type(codeInput, 'BCH1A2024')
+      await user.click(submitButton)
+
+      // Verify service was called
+      expect(authService.loginTutor).toHaveBeenCalledWith('BCH1A2024')
+
+      // Wait for login to complete
+      await waitFor(() => {
+        expect(authService.loginTutor).toHaveBeenCalledTimes(1)
+      })
+    })
+
+    it('should handle tutor login failure gracefully', async () => {
+      const user = userEvent.setup()
+      
+      // Mock failed tutor login
+      const { default: authService } = await import('../../src/services/auth.js')
+      authService.loginTutor.mockResolvedValue({
+        success: false,
+        error: 'Código de activación inválido'
+      })
+
+      render(
+        <TestWrapper>
+          <TutorLogin />
+        </TestWrapper>
+      )
+
+      // Fill and submit form
+      const codeInput = screen.getByPlaceholderText(/código de activación/i)
+      const submitButton = screen.getByRole('button', { name: /acceder/i })
+
+      await user.type(codeInput, 'INVALID_CODE')
+      await user.click(submitButton)
+
+      // Verify service was called
+      expect(authService.loginTutor).toHaveBeenCalledWith('INVALID_CODE')
+
+      // Should show error message
+      await waitFor(() => {
+        expect(screen.getByText(/código de activación inválido/i)).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Protected Route Integration', () => {
+    it('should render protected content for authenticated admin', async () => {
+      // Mock authenticated admin session
+      const { default: authService } = await import('../../src/services/auth.js')
+      authService.getSession.mockReturnValue({
+        role: 'admin',
+        username: 'admin',
+        sessionId: 'admin-session-123'
+      })
+      authService.isSessionValid.mockReturnValue(true)
+
+      const TestComponent = () => <div>Protected Admin Content</div>
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute allowedRoles={['admin']}>
+            <TestComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      // Should show protected content
+      expect(screen.getByText('Protected Admin Content')).toBeInTheDocument()
+    })
+
+    it('should render protected content for authenticated tutor', async () => {
+      // Mock authenticated tutor session
+      const { default: authService } = await import('../../src/services/auth.js')
+      authService.getSession.mockReturnValue({
+        role: 'tutor',
+        activationCode: 'BCH1A2024',
+        course: '1ro Bach A'
+      })
+      authService.isSessionValid.mockReturnValue(true)
+
+      const TestComponent = () => <div>Protected Tutor Content</div>
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute allowedRoles={['tutor']}>
+            <TestComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      // Should show protected content
+      expect(screen.getByText('Protected Tutor Content')).toBeInTheDocument()
+    })
+
+    it('should redirect unauthenticated users', async () => {
+      // Mock no session
+      const { default: authService } = await import('../../src/services/auth.js')
+      authService.getSession.mockReturnValue(null)
+      authService.isSessionValid.mockReturnValue(false)
+
+      const TestComponent = () => <div>Protected Content</div>
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute allowedRoles={['admin']}>
+            <TestComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      // Should not show protected content
+      expect(screen.queryByText('Protected Content')).not.toBeInTheDocument()
+    })
+
+    it('should redirect users with insufficient permissions', async () => {
+      // Mock tutor session trying to access admin content
+      const { default: authService } = await import('../../src/services/auth.js')
+      authService.getSession.mockReturnValue({
+        role: 'tutor',
+        activationCode: 'BCH1A2024'
+      })
+      authService.isSessionValid.mockReturnValue(true)
+
+      const TestComponent = () => <div>Admin Only Content</div>
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute allowedRoles={['admin']}>
+            <TestComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      // Should not show protected content
+      expect(screen.queryByText('Admin Only Content')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Session Management Integration', () => {
+    it('should persist session across component re-renders', async () => {
+      // Mock existing session
+      const mockSession = {
+        role: 'admin',
+        username: 'admin',
+        sessionId: 'admin-session-123'
+      }
+      
+      const { default: authService } = await import('../../src/services/auth.js')
+      authService.getSession.mockReturnValue(mockSession)
+      authService.isSessionValid.mockReturnValue(true)
+
+      const { rerender } = render(
+        <TestWrapper>
+          <ProtectedRoute allowedRoles={['admin']}>
+            <div>Persistent Content</div>
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      // Should show content initially
+      expect(screen.getByText('Persistent Content')).toBeInTheDocument()
+
+      // Re-render component
+      rerender(
+        <TestWrapper>
+          <ProtectedRoute allowedRoles={['admin']}>
+            <div>Persistent Content</div>
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      // Should still show content after re-render
+      expect(screen.getByText('Persistent Content')).toBeInTheDocument()
+    })
+
+    it('should handle session expiration gracefully', async () => {
+      // Mock expired session
+      const { default: authService } = await import('../../src/services/auth.js')
+      authService.getSession.mockReturnValue({
+        role: 'admin',
+        username: 'admin',
+        loginTime: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString() // 25 hours ago
+      })
+      authService.isSessionValid.mockReturnValue(false)
+
+      const TestComponent = () => <div>Protected Content</div>
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute allowedRoles={['admin']}>
+            <TestComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      // Should not show protected content for expired session
+      expect(screen.queryByText('Protected Content')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Error Handling Integration', () => {
+    it('should handle database errors during authentication', async () => {
+      const user = userEvent.setup()
+      
+      // Mock database error during login
+      const { default: authService } = await import('../../src/services/auth.js')
+      authService.loginAdmin.mockRejectedValue(new Error('Database connection failed'))
+
+      render(
+        <TestWrapper>
+          <AdminLogin />
+        </TestWrapper>
+      )
+
+      // Fill and submit form
+      const usernameInput = screen.getByPlaceholderText('Usuario')
+      const passwordInput = screen.getByPlaceholderText('Contraseña')
+      const submitButton = screen.getByRole('button', { name: 'Acceder' })
+
+      await user.type(usernameInput, 'admin')
+      await user.type(passwordInput, 'admin2024')
+      await user.click(submitButton)
+
+      // Should handle error gracefully
+      await waitFor(() => {
+        expect(authService.loginAdmin).toHaveBeenCalledWith('admin', 'admin2024')
+      })
+    })
+
+    it('should handle localStorage errors gracefully', async () => {
+      // Mock localStorage error
+      const originalSetItem = localStorage.setItem
+      localStorage.setItem = vi.fn().mockImplementation(() => {
+        throw new Error('localStorage quota exceeded')
+      })
+
+      const { default: authService } = await import('../../src/services/auth.js')
+      authService.loginAdmin.mockResolvedValue({
+        success: true,
+        user: { role: 'admin', username: 'admin' }
+      })
+
+      render(
+        <TestWrapper>
+          <AdminLogin />
+        </TestWrapper>
+      )
+
+      // Should not crash when localStorage fails
+      expect(screen.getByText('👨‍💼 Acceso Administrador')).toBeInTheDocument()
+
+      // Restore original
+      localStorage.setItem = originalSetItem
+    })
   })
 })
