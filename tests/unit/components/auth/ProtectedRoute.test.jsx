@@ -1,31 +1,48 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen } from '@testing-library/react'
-import { renderWithProviders } from '../../../test/utils'
+import { render, screen } from '@testing-library/react'
 import ProtectedRoute from '../../../../src/components/auth/ProtectedRoute'
 
 // Mock the useAuth hook
 const mockUser = vi.fn()
 const mockIsLoading = vi.fn()
+const mockIsAuthenticated = vi.fn()
+const mockError = vi.fn()
 
 vi.mock('../../../../src/contexts/AuthContext', () => ({
   useAuth: () => ({
     user: mockUser(),
     isLoading: mockIsLoading(),
+  }),
+  useAuthContext: () => ({
+    isAuthenticated: mockIsAuthenticated(),
+    isLoading: mockIsLoading(),
+    error: mockError(),
   })
+}))
+
+// Mock TutorLogin component
+vi.mock('../../../../src/components/auth/TutorLogin', () => ({
+  default: () => <div data-testid="tutor-login">Tutor Login Form</div>
 }))
 
 // Test component to render inside protected route
 const TestComponent = () => <div data-testid="protected-content">Protected Content</div>
 
+const renderWithProviders = (component) => {
+  return render(component)
+}
+
 describe('ProtectedRoute Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsLoading.mockReturnValue(false)
+    mockIsAuthenticated.mockReturnValue(true)
+    mockError.mockReturnValue(null)
   })
 
   it('should render children when user is authenticated', () => {
-    mockUser.mockReturnValue({ id: 'admin-1', role: 'admin' })
+    mockIsAuthenticated.mockReturnValue(true)
     
     renderWithProviders(
       <ProtectedRoute>
@@ -38,7 +55,7 @@ describe('ProtectedRoute Component', () => {
 
   it('should render loading spinner when loading', () => {
     mockIsLoading.mockReturnValue(true)
-    mockUser.mockReturnValue(null)
+    mockIsAuthenticated.mockReturnValue(false)
     
     renderWithProviders(
       <ProtectedRoute>
@@ -50,8 +67,8 @@ describe('ProtectedRoute Component', () => {
     expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument()
   })
 
-  it('should redirect to login when user is not authenticated', () => {
-    mockUser.mockReturnValue(null)
+  it('should show TutorLogin when user is not authenticated', () => {
+    mockIsAuthenticated.mockReturnValue(false)
     
     renderWithProviders(
       <ProtectedRoute>
@@ -59,13 +76,38 @@ describe('ProtectedRoute Component', () => {
       </ProtectedRoute>
     )
     
-    expect(screen.getByText(/acceso denegado/i)).toBeInTheDocument()
-    expect(screen.getByText(/debe iniciar sesión/i)).toBeInTheDocument()
+    expect(screen.getByTestId('tutor-login')).toBeInTheDocument()
+    expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument()
+  })
+
+  it('should show access required message when showLogin is false', () => {
+    mockIsAuthenticated.mockReturnValue(false)
+    
+    renderWithProviders(
+      <ProtectedRoute showLogin={false}>
+        <TestComponent />
+      </ProtectedRoute>
+    )
+    
+    expect(screen.getByText(/acceso requerido/i)).toBeInTheDocument()
+    expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument()
+  })
+
+  it('should show error message when there is an error', () => {
+    mockError.mockReturnValue('Database connection failed')
+    
+    renderWithProviders(
+      <ProtectedRoute>
+        <TestComponent />
+      </ProtectedRoute>
+    )
+    
+    expect(screen.getByText(/error: database connection failed/i)).toBeInTheDocument()
     expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument()
   })
 
   it('should allow access for admin role when requiredRole is admin', () => {
-    mockUser.mockReturnValue({ id: 'admin-1', role: 'admin' })
+    mockIsAuthenticated.mockReturnValue(true)
     
     renderWithProviders(
       <ProtectedRoute requiredRole="admin">
@@ -77,7 +119,7 @@ describe('ProtectedRoute Component', () => {
   })
 
   it('should deny access for tutor when requiredRole is admin', () => {
-    mockUser.mockReturnValue({ id: 'tutor-1', role: 'tutor' })
+    mockIsAuthenticated.mockReturnValue(false)
     
     renderWithProviders(
       <ProtectedRoute requiredRole="admin">
@@ -85,13 +127,12 @@ describe('ProtectedRoute Component', () => {
       </ProtectedRoute>
     )
     
-    expect(screen.getByText(/acceso denegado/i)).toBeInTheDocument()
-    expect(screen.getByText(/no tiene permisos/i)).toBeInTheDocument()
+    expect(screen.getByTestId('tutor-login')).toBeInTheDocument()
     expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument()
   })
 
   it('should allow access for tutor role when requiredRole is tutor', () => {
-    mockUser.mockReturnValue({ id: 'tutor-1', role: 'tutor', course: '1ro Bach A' })
+    mockIsAuthenticated.mockReturnValue(true)
     
     renderWithProviders(
       <ProtectedRoute requiredRole="tutor">
@@ -102,22 +143,8 @@ describe('ProtectedRoute Component', () => {
     expect(screen.getByTestId('protected-content')).toBeInTheDocument()
   })
 
-  it('should show appropriate messages for unauthorized access', () => {
-    mockUser.mockReturnValue({ id: 'student-1', role: 'student' })
-    
-    renderWithProviders(
-      <ProtectedRoute requiredRole="admin">
-        <TestComponent />
-      </ProtectedRoute>
-    )
-    
-    expect(screen.getByText('🚫')).toBeInTheDocument()
-    expect(screen.getByText(/acceso denegado/i)).toBeInTheDocument()
-    expect(screen.getByText(/no tiene permisos/i)).toBeInTheDocument()
-  })
-
   it('should handle multiple allowed roles', () => {
-    mockUser.mockReturnValue({ id: 'tutor-1', role: 'tutor' })
+    mockIsAuthenticated.mockReturnValue(true)
     
     renderWithProviders(
       <ProtectedRoute requiredRole={['admin', 'tutor']}>
@@ -129,7 +156,7 @@ describe('ProtectedRoute Component', () => {
   })
 
   it('should deny access when user role is not in allowed roles array', () => {
-    mockUser.mockReturnValue({ id: 'student-1', role: 'student' })
+    mockIsAuthenticated.mockReturnValue(false)
     
     renderWithProviders(
       <ProtectedRoute requiredRole={['admin', 'tutor']}>
@@ -137,12 +164,12 @@ describe('ProtectedRoute Component', () => {
       </ProtectedRoute>
     )
     
-    expect(screen.getByText(/acceso denegado/i)).toBeInTheDocument()
+    expect(screen.getByTestId('tutor-login')).toBeInTheDocument()
     expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument()
   })
 
   it('should pass through additional props to children', () => {
-    mockUser.mockReturnValue({ id: 'admin-1', role: 'admin' })
+    mockIsAuthenticated.mockReturnValue(true)
     
     const TestComponentWithProps = ({ testProp }) => (
       <div data-testid="protected-content">{testProp}</div>

@@ -2,259 +2,285 @@ import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { AuthProvider } from '../../../../src/contexts/AuthContext.jsx'
 import AdminLogin from '../../../../src/components/auth/AdminLogin.jsx'
 
 // Mock auth service
-vi.mock('../../../../src/services/auth', () => ({
+const mockAuthService = {
+  loginAdmin: vi.fn(),
+  loginTutor: vi.fn(),
+  getSession: vi.fn(),
+  clearSession: vi.fn(),
+  isSessionValid: vi.fn(),
+  validateActivationCode: vi.fn(),
+  saveSession: vi.fn(),
+  logout: vi.fn()
+}
+
+vi.mock('../../../../src/services/auth.js', () => ({
+  default: mockAuthService
+}))
+
+// Mock database service
+vi.mock('../../../../src/services/database-indexeddb.js', () => ({
   default: {
-    loginAdmin: vi.fn(),
-    getSession: vi.fn(),
-    clearSession: vi.fn()
+    createDocument: vi.fn(),
+    findDocuments: vi.fn(),
+    isReady: vi.fn().mockReturnValue(true)
+  },
+  DOC_TYPES: {
+    SESSION: 'session'
   }
 }))
 
 // Mock useAuth hook
-vi.mock('../../../../src/hooks/useAuth', () => ({
-  useAuth: () => ({
-    user: null,
-    isLoading: false,
-    loginAdmin: vi.fn(),
-    logout: vi.fn()
-  })
+const mockUseAuth = {
+  loginAsAdmin: vi.fn(),
+  isOnline: true
+}
+
+vi.mock('../../../../src/contexts/AuthContext.jsx', () => ({
+  AuthProvider: ({ children }) => <div data-testid="auth-provider">{children}</div>,
+  useAuth: () => mockUseAuth
 }))
 
+const renderWithProviders = (component) => {
+  return render(
+    <AuthProvider>
+      {component}
+    </AuthProvider>
+  )
+}
+
 describe('AdminLogin Component', () => {
-  const mockOnLogin = vi.fn()
-  const mockOnCancel = vi.fn()
+  const user = userEvent.setup()
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockUseAuth.loginAsAdmin.mockResolvedValue({ success: true })
+    mockUseAuth.isOnline = true
   })
 
   describe('Rendering', () => {
-    it('should render login form correctly', () => {
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} />)
-      
-      expect(screen.getByText('👨‍💼 Acceso Administrador')).toBeInTheDocument()
-      expect(screen.getByPlaceholderText('Usuario')).toBeInTheDocument()
-      expect(screen.getByPlaceholderText('Contraseña')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Acceder' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Cancelar' })).toBeInTheDocument()
+    it('should render admin login form', () => {
+      renderWithProviders(<AdminLogin />)
+
+      expect(screen.getByText('🏛️ PANEL DE ADMINISTRACIÓN')).toBeInTheDocument()
+      expect(screen.getByText('🔐 ACCESO RESTRINGIDO')).toBeInTheDocument()
+      expect(screen.getByLabelText('🔑 Contraseña de Administrador:')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('Ingrese la contraseña')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '🔓 ACCEDER AL PANEL' })).toBeInTheDocument()
     })
 
-    it('should show loading state when isLoading is true', () => {
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} isLoading={true} />)
-      
-      const submitButton = screen.getByRole('button', { name: 'Acceder' })
-      expect(submitButton).toBeDisabled()
-      expect(screen.getByText('🔄 Iniciando sesión...')).toBeInTheDocument()
+    it('should show connection status', () => {
+      renderWithProviders(<AdminLogin />)
+
+      expect(screen.getByText(/💡 Estado:/)).toBeInTheDocument()
+      expect(screen.getByText(/🟢 Conectado/)).toBeInTheDocument()
     })
 
-    it('should show error message when provided', () => {
-      const errorMessage = 'Credenciales incorrectas'
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} error={errorMessage} />)
-      
-      expect(screen.getByText(errorMessage)).toBeInTheDocument()
+    it('should show help information', () => {
+      renderWithProviders(<AdminLogin />)
+
+      expect(screen.getByText('ℹ️ Información:')).toBeInTheDocument()
+      expect(screen.getByText(/Para acceso de desarrollo/)).toBeInTheDocument()
+      expect(screen.getByText(/admin2024/)).toBeInTheDocument()
     })
   })
 
   describe('Form Interaction', () => {
-    it('should update username field when typing', async () => {
-      const user = userEvent.setup()
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} />)
-      
-      const usernameInput = screen.getByPlaceholderText('Usuario')
-      await user.type(usernameInput, 'admin')
-      
-      expect(usernameInput).toHaveValue('admin')
-    })
-
     it('should update password field when typing', async () => {
-      const user = userEvent.setup()
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} />)
-      
-      const passwordInput = screen.getByPlaceholderText('Contraseña')
-      await user.type(passwordInput, 'password123')
-      
-      expect(passwordInput).toHaveValue('password123')
+      renderWithProviders(<AdminLogin />)
+
+      const passwordInput = screen.getByPlaceholderText('Ingrese la contraseña')
+      await user.type(passwordInput, 'admin2024')
+
+      expect(passwordInput).toHaveValue('admin2024')
     })
 
-    it('should toggle password visibility when eye icon is clicked', async () => {
-      const user = userEvent.setup()
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} />)
-      
-      const passwordInput = screen.getByPlaceholderText('Contraseña')
-      const toggleButton = screen.getByRole('button', { name: /toggle password/i })
-      
-      // Password should be hidden by default
-      expect(passwordInput).toHaveAttribute('type', 'password')
-      
-      // Click to show password
-      await user.click(toggleButton)
-      expect(passwordInput).toHaveAttribute('type', 'text')
-      
-      // Click to hide password again
-      await user.click(toggleButton)
-      expect(passwordInput).toHaveAttribute('type', 'password')
+    it('should enable submit button when password is entered', async () => {
+      renderWithProviders(<AdminLogin />)
+
+      const passwordInput = screen.getByPlaceholderText('Ingrese la contraseña')
+      const submitButton = screen.getByRole('button', { name: '🔓 ACCEDER AL PANEL' })
+
+      expect(submitButton).toBeDisabled()
+
+      await user.type(passwordInput, 'admin2024')
+
+      expect(submitButton).not.toBeDisabled()
+    })
+
+    it('should disable submit button when password is empty', () => {
+      renderWithProviders(<AdminLogin />)
+
+      const submitButton = screen.getByRole('button', { name: '🔓 ACCEDER AL PANEL' })
+      expect(submitButton).toBeDisabled()
     })
   })
 
   describe('Form Submission', () => {
-    it('should call onLogin with form data when submitted', async () => {
-      const user = userEvent.setup()
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} />)
-      
-      const usernameInput = screen.getByPlaceholderText('Usuario')
-      const passwordInput = screen.getByPlaceholderText('Contraseña')
-      const submitButton = screen.getByRole('button', { name: 'Acceder' })
-      
-      await user.type(usernameInput, 'admin')
+    it('should call loginAsAdmin with password on submit', async () => {
+      renderWithProviders(<AdminLogin />)
+
+      const passwordInput = screen.getByPlaceholderText('Ingrese la contraseña')
+      const submitButton = screen.getByRole('button', { name: '🔓 ACCEDER AL PANEL' })
+
       await user.type(passwordInput, 'admin2024')
       await user.click(submitButton)
-      
-      expect(mockOnLogin).toHaveBeenCalledWith('admin', 'admin2024')
+
+      expect(mockUseAuth.loginAsAdmin).toHaveBeenCalledWith('admin2024')
     })
 
-    it('should not submit form with empty fields', async () => {
-      const user = userEvent.setup()
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} />)
-      
-      const submitButton = screen.getByRole('button', { name: 'Acceder' })
-      await user.click(submitButton)
-      
-      expect(mockOnLogin).not.toHaveBeenCalled()
-    })
+    it('should show loading state during submission', async () => {
+      mockUseAuth.loginAsAdmin.mockImplementation(() => 
+        new Promise(resolve => setTimeout(() => resolve({ success: true }), 100))
+      )
 
-    it('should not submit form with only username', async () => {
-      const user = userEvent.setup()
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} />)
-      
-      const usernameInput = screen.getByPlaceholderText('Usuario')
-      const submitButton = screen.getByRole('button', { name: 'Acceder' })
-      
-      await user.type(usernameInput, 'admin')
-      await user.click(submitButton)
-      
-      expect(mockOnLogin).not.toHaveBeenCalled()
-    })
+      renderWithProviders(<AdminLogin />)
 
-    it('should not submit form with only password', async () => {
-      const user = userEvent.setup()
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} />)
-      
-      const passwordInput = screen.getByPlaceholderText('Contraseña')
-      const submitButton = screen.getByRole('button', { name: 'Acceder' })
-      
+      const passwordInput = screen.getByPlaceholderText('Ingrese la contraseña')
+      const submitButton = screen.getByRole('button', { name: '🔓 ACCEDER AL PANEL' })
+
       await user.type(passwordInput, 'admin2024')
       await user.click(submitButton)
-      
-      expect(mockOnLogin).not.toHaveBeenCalled()
+
+      expect(screen.getByText('🔄 Verificando...')).toBeInTheDocument()
+    })
+
+    it('should show error message on failed login', async () => {
+      mockUseAuth.loginAsAdmin.mockResolvedValue({ 
+        success: false, 
+        error: 'Contraseña incorrecta' 
+      })
+
+      renderWithProviders(<AdminLogin />)
+
+      const passwordInput = screen.getByPlaceholderText('Ingrese la contraseña')
+      const submitButton = screen.getByRole('button', { name: '🔓 ACCEDER AL PANEL' })
+
+      await user.type(passwordInput, 'wrongpassword')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('⚠️ Contraseña incorrecta')).toBeInTheDocument()
+      })
+    })
+
+    it('should show validation error for empty password', async () => {
+      renderWithProviders(<AdminLogin />)
+
+      const submitButton = screen.getByRole('button', { name: '🔓 ACCEDER AL PANEL' })
+      await user.click(submitButton)
+
+      // The button should be disabled, so no submission should occur
+      expect(mockUseAuth.loginAsAdmin).not.toHaveBeenCalled()
+    })
+
+    it('should clear error when user starts typing', async () => {
+      renderWithProviders(<AdminLogin />)
+
+      const passwordInput = screen.getByPlaceholderText('Ingrese la contraseña')
+      const submitButton = screen.getByRole('button', { name: '🔓 ACCEDER AL PANEL' })
+
+      // First submit to show error (but button is disabled)
+      await user.click(submitButton)
+      expect(mockUseAuth.loginAsAdmin).not.toHaveBeenCalled()
+
+      // Then type to enable button
+      await user.type(passwordInput, 'a')
+      expect(submitButton).not.toBeDisabled()
     })
   })
 
-  describe('Cancel Functionality', () => {
-    it('should call onCancel when cancel button is clicked', async () => {
-      const user = userEvent.setup()
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} />)
-      
-      const cancelButton = screen.getByRole('button', { name: 'Cancelar' })
-      await user.click(cancelButton)
-      
-      expect(mockOnCancel).toHaveBeenCalled()
+  describe('Connection Status', () => {
+    it('should show online status when connected', () => {
+      mockUseAuth.isOnline = true
+      renderWithProviders(<AdminLogin />)
+
+      expect(screen.getByText(/🟢 Conectado/)).toBeInTheDocument()
     })
 
-    it('should call onCancel when escape key is pressed', async () => {
-      const user = userEvent.setup()
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} />)
-      
-      await user.keyboard('{Escape}')
-      
-      expect(mockOnCancel).toHaveBeenCalled()
+    it('should show offline status when disconnected', () => {
+      mockUseAuth.isOnline = false
+      renderWithProviders(<AdminLogin />)
+
+      expect(screen.getByText(/🔴 Sin conexión/)).toBeInTheDocument()
+    })
+  })
+
+  describe('Accessibility', () => {
+    it('should have proper form labels', () => {
+      renderWithProviders(<AdminLogin />)
+
+      expect(screen.getByLabelText('🔑 Contraseña de Administrador:')).toBeInTheDocument()
+    })
+
+    it('should have proper button types', () => {
+      renderWithProviders(<AdminLogin />)
+
+      const submitButton = screen.getByRole('button', { name: '🔓 ACCEDER AL PANEL' })
+      expect(submitButton).toHaveAttribute('type', 'submit')
+    })
+
+    it('should have proper input attributes', () => {
+      renderWithProviders(<AdminLogin />)
+
+      const passwordInput = screen.getByPlaceholderText('Ingrese la contraseña')
+      expect(passwordInput).toHaveAttribute('type', 'password')
+      expect(passwordInput).toHaveAttribute('autoComplete', 'current-password')
+    })
+  })
+
+  describe('Error Handling', () => {
+    it('should handle network errors gracefully', async () => {
+      // Mock a network error that returns an error object instead of throwing
+      mockUseAuth.loginAsAdmin.mockResolvedValue({ 
+        success: false, 
+        error: 'Error de conexión' 
+      })
+
+      renderWithProviders(<AdminLogin />)
+
+      const passwordInput = screen.getByPlaceholderText('Ingrese la contraseña')
+      const submitButton = screen.getByRole('button', { name: '🔓 ACCEDER AL PANEL' })
+
+      await user.type(passwordInput, 'admin2024')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('⚠️ Error de conexión')).toBeInTheDocument()
+      })
+    })
+
+    it('should not submit form with empty password', async () => {
+      renderWithProviders(<AdminLogin />)
+
+      const submitButton = screen.getByRole('button', { name: '🔓 ACCEDER AL PANEL' })
+      await user.click(submitButton)
+
+      expect(mockUseAuth.loginAsAdmin).not.toHaveBeenCalled()
+      expect(submitButton).toBeDisabled()
     })
   })
 
   describe('Keyboard Navigation', () => {
     it('should submit form when Enter key is pressed', async () => {
-      const user = userEvent.setup()
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} />)
-      
-      const usernameInput = screen.getByPlaceholderText('Usuario')
-      const passwordInput = screen.getByPlaceholderText('Contraseña')
-      
-      await user.type(usernameInput, 'admin')
+      renderWithProviders(<AdminLogin />)
+
+      const passwordInput = screen.getByPlaceholderText('Ingrese la contraseña')
       await user.type(passwordInput, 'admin2024')
       await user.keyboard('{Enter}')
-      
-      expect(mockOnLogin).toHaveBeenCalledWith('admin', 'admin2024')
+
+      expect(mockUseAuth.loginAsAdmin).toHaveBeenCalledWith('admin2024')
     })
 
-    it('should focus password field when Tab is pressed from username', async () => {
-      const user = userEvent.setup()
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} />)
-      
-      const usernameInput = screen.getByPlaceholderText('Usuario')
-      const passwordInput = screen.getByPlaceholderText('Contraseña')
-      
-      await user.click(usernameInput)
-      await user.keyboard('{Tab}')
-      
+    it('should focus password field when clicked', async () => {
+      renderWithProviders(<AdminLogin />)
+
+      const passwordInput = screen.getByPlaceholderText('Ingrese la contraseña')
+      await user.click(passwordInput)
       expect(passwordInput).toHaveFocus()
-    })
-  })
-
-  describe('Accessibility', () => {
-    it('should have proper ARIA labels', () => {
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} />)
-      
-      const usernameInput = screen.getByPlaceholderText('Usuario')
-      const passwordInput = screen.getByPlaceholderText('Contraseña')
-      
-      expect(usernameInput).toHaveAttribute('aria-label', 'Usuario administrador')
-      expect(passwordInput).toHaveAttribute('aria-label', 'Contraseña administrador')
-    })
-
-    it('should have proper form labels', () => {
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} />)
-      
-      expect(screen.getByText('Usuario:')).toBeInTheDocument()
-      expect(screen.getByText('Contraseña:')).toBeInTheDocument()
-    })
-
-    it('should have proper button types', () => {
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} />)
-      
-      const submitButton = screen.getByRole('button', { name: 'Acceder' })
-      const cancelButton = screen.getByRole('button', { name: 'Cancelar' })
-      
-      expect(submitButton).toHaveAttribute('type', 'submit')
-      expect(cancelButton).toHaveAttribute('type', 'button')
-    })
-  })
-
-  describe('Error Handling', () => {
-    it('should clear error when user starts typing', async () => {
-      const user = userEvent.setup()
-      const errorMessage = 'Credenciales incorrectas'
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} error={errorMessage} />)
-      
-      expect(screen.getByText(errorMessage)).toBeInTheDocument()
-      
-      const usernameInput = screen.getByPlaceholderText('Usuario')
-      await user.type(usernameInput, 'a')
-      
-      // Error should be cleared when user starts typing
-      expect(screen.queryByText(errorMessage)).not.toBeInTheDocument()
-    })
-
-    it('should show validation error for empty submission', async () => {
-      const user = userEvent.setup()
-      render(<AdminLogin onLogin={mockOnLogin} onCancel={mockOnCancel} />)
-      
-      const submitButton = screen.getByRole('button', { name: 'Acceder' })
-      await user.click(submitButton)
-      
-      // Should show validation error
-      expect(screen.getByText(/por favor complete todos los campos/i)).toBeInTheDocument()
     })
   })
 })

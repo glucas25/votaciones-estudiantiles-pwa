@@ -16,6 +16,21 @@ body {
   min-height: 100vh;
 }
 
+/* Migration error banner */
+.migration-error-banner {
+  background: linear-gradient(135deg, #ff6b6b, #feca57);
+  color: #fff;
+  padding: 12px 20px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-bottom: 2px solid #e74c3c;
+  font-weight: 500;
+}
+
+.migration-error-banner p {
+  margin: 2px 0;
+}
+
 /* Homepage Styles */
 .homepage {
   min-height: 100vh;

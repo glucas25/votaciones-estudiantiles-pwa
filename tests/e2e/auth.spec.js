@@ -182,7 +182,7 @@ test.describe('Authentication E2E Tests', () => {
 
       for (const { code, level, course } of validCodes) {
         // Navigate to tutor login
-        await page.goto('/')
+    await page.goto('/')
         await page.getByRole('button', { name: /docente\/tutor/i }).click()
         
         // Fill activation code
@@ -224,10 +224,10 @@ test.describe('Authentication E2E Tests', () => {
       
       // Should be on tutor panel
       await expect(page.getByText(/gestión de votación/i)).toBeVisible()
-      
-      // Reload page
-      await page.reload()
-      
+    
+    // Reload page
+    await page.reload()
+    
       // Should still be on tutor panel
       await expect(page.getByText(/gestión de votación/i)).toBeVisible()
     })

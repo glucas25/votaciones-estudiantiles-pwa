@@ -1,8 +1,15 @@
 // src/services/database.js
-import PouchDB from 'pouchdb'
+import * as PouchDBModule from 'pouchdb'
+import PouchDBFind from 'pouchdb-find'
+import PouchDBAdapterIdb from 'pouchdb-adapter-idb'
 
-// Simple PouchDB setup without plugins initially
-// Plugins will be loaded dynamically when needed
+// Get the default export correctly
+const PouchDB = PouchDBModule.default || PouchDBModule
+
+// Setup PouchDB with plugins
+PouchDB.plugin(PouchDBFind)
+PouchDB.plugin(PouchDBAdapterIdb)
+
 console.log('🔧 Initializing PouchDB service...')
 
 // Database configuration

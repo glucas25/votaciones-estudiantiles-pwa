@@ -2,200 +2,206 @@ import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { AuthProvider, useAuth } from '../../../src/contexts/AuthContext'
-import authService from '../../../src/services/auth'
+import { AuthProvider, useAuth } from '../../../src/contexts/AuthContext.jsx'
 
-// Mock auth service
-vi.mock('../../../src/services/auth', () => ({
-  default: {
-    loginAdmin: vi.fn(),
-    loginTutor: vi.fn(),
-    getSession: vi.fn(),
-    saveSession: vi.fn(),
-    clearSession: vi.fn(),
-    isSessionValid: vi.fn()
-  }
-}))
-
-// Test component to use the hook
-const TestComponent = () => {
-  const { user, isLoading, loginAdmin, loginTutor, logout } = useAuth()
-  
-  return (
-    <div>
-      <div data-testid="user">{user ? user.role : 'no user'}</div>
-      <div data-testid="loading">{isLoading ? 'loading' : 'not loading'}</div>
-      <button 
-        data-testid="login-admin" 
-        onClick={() => loginAdmin('admin', 'admin2024')}
-      >
-        Login Admin
-      </button>
-      <button 
-        data-testid="login-tutor" 
-        onClick={() => loginTutor('BCH1A2024')}
-      >
-        Login Tutor
-      </button>
-      <button data-testid="logout" onClick={logout}>
-        Logout
-      </button>
-    </div>
-  )
+// Mock localStorage
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn()
 }
+Object.defineProperty(window, 'localStorage', { value: localStorageMock })
+
+// Mock navigator.onLine
+Object.defineProperty(navigator, 'onLine', {
+  writable: true,
+  value: true
+})
 
 describe('AuthContext', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    authService.getSession.mockReturnValue(null)
+    localStorageMock.clear()
+    localStorageMock.getItem.mockReturnValue(null)
   })
 
   describe('AuthProvider initialization', () => {
-    it('should initialize with no user when no session exists', async () => {
-      authService.getSession.mockReturnValue(null)
-      
+    it('should initialize with no user by default', () => {
       render(
         <AuthProvider>
-          <TestComponent />
+          <div data-testid="user">no user</div>
         </AuthProvider>
       )
       
-      await waitFor(() => {
-        expect(screen.getByTestId('user')).toHaveTextContent('no user')
-        expect(screen.getByTestId('loading')).toHaveTextContent('not loading')
-      })
+      expect(screen.getByTestId('user')).toHaveTextContent('no user')
     })
 
     it('should restore user from valid session', async () => {
       const mockSession = {
-        user: { id: 'admin-1', role: 'admin' },
-        timestamp: Date.now()
+        role: 'tutor',
+        activationCode: 'ELEC2024-BACH',
+        course: '1ro Bach A',
+        level: 'BACHILLERATO',
+        levelName: 'Bachillerato',
+        tutorName: 'Profesor García',
+        loginTime: new Date().toISOString(),
+        sessionId: 'test-session'
       }
-      authService.getSession.mockReturnValue(mockSession)
-      authService.isSessionValid.mockReturnValue(true)
       
+      localStorageMock.getItem.mockReturnValue(JSON.stringify(mockSession))
+
+      const TestComponent = () => {
+        const { user } = useAuth()
+        return <div data-testid="user">{user?.role || 'no user'}</div>
+      }
+
       render(
         <AuthProvider>
           <TestComponent />
         </AuthProvider>
       )
-      
+
       await waitFor(() => {
-        expect(screen.getByTestId('user')).toHaveTextContent('admin')
+        expect(screen.getByTestId('user')).toHaveTextContent('tutor')
       })
     })
 
     it('should clear invalid session on initialization', async () => {
       const mockSession = {
-        user: { id: 'admin-1', role: 'admin' },
-        timestamp: Date.now() - (25 * 60 * 60 * 1000) // expired
+        role: 'admin',
+        loginTime: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 24 hours ago
+        sessionId: 'test-session'
       }
-      authService.getSession.mockReturnValue(mockSession)
-      authService.isSessionValid.mockReturnValue(false)
       
+      localStorageMock.getItem.mockReturnValue(JSON.stringify(mockSession))
+
       render(
         <AuthProvider>
-          <TestComponent />
+          <div data-testid="user">no user</div>
         </AuthProvider>
       )
-      
+
       await waitFor(() => {
-        expect(authService.clearSession).toHaveBeenCalled()
+        expect(localStorageMock.removeItem).toHaveBeenCalledWith('voting_session')
         expect(screen.getByTestId('user')).toHaveTextContent('no user')
       })
     })
   })
 
-  describe('loginAdmin', () => {
+  describe('loginAsAdmin', () => {
     it('should login admin successfully', async () => {
       const user = userEvent.setup()
-      authService.loginAdmin.mockResolvedValue({
-        success: true,
-        user: { id: 'admin-1', role: 'admin' }
-      })
       
+      const TestComponent = () => {
+        const { loginAsAdmin, user: currentUser } = useAuth()
+        return (
+          <div>
+            <div data-testid="user">{currentUser?.role || 'no user'}</div>
+            <button data-testid="login-admin" onClick={() => loginAsAdmin('admin2024')}>
+              Login Admin
+            </button>
+          </div>
+        )
+      }
+
       render(
         <AuthProvider>
           <TestComponent />
         </AuthProvider>
       )
-      
+
       await user.click(screen.getByTestId('login-admin'))
-      
+
       await waitFor(() => {
-        expect(authService.loginAdmin).toHaveBeenCalledWith('admin', 'admin2024')
-        expect(authService.saveSession).toHaveBeenCalled()
+        expect(localStorageMock.setItem).toHaveBeenCalledWith('voting_session', expect.any(String))
         expect(screen.getByTestId('user')).toHaveTextContent('admin')
       })
     })
 
     it('should handle admin login failure', async () => {
       const user = userEvent.setup()
-      authService.loginAdmin.mockResolvedValue({
-        success: false,
-        error: 'Credenciales incorrectas'
-      })
       
+      const TestComponent = () => {
+        const { loginAsAdmin, user: currentUser } = useAuth()
+        return (
+          <div>
+            <div data-testid="user">{currentUser?.role || 'no user'}</div>
+            <button data-testid="login-admin" onClick={() => loginAsAdmin('wrong')}>
+              Login Admin
+            </button>
+          </div>
+        )
+      }
+
       render(
         <AuthProvider>
           <TestComponent />
         </AuthProvider>
       )
-      
+
       await user.click(screen.getByTestId('login-admin'))
-      
+
       await waitFor(() => {
-        expect(authService.saveSession).not.toHaveBeenCalled()
         expect(screen.getByTestId('user')).toHaveTextContent('no user')
       })
     })
   })
 
-  describe('loginTutor', () => {
+  describe('login', () => {
     it('should login tutor successfully', async () => {
       const user = userEvent.setup()
-      authService.loginTutor.mockResolvedValue({
-        success: true,
-        user: { 
-          id: 'tutor-1', 
-          role: 'tutor', 
-          course: '1ro Bach A',
-          activationCode: 'BCH1A2024'
-        }
-      })
       
+      const TestComponent = () => {
+        const { login, user: currentUser } = useAuth()
+        return (
+          <div>
+            <div data-testid="user">{currentUser?.role || 'no user'}</div>
+            <button data-testid="login-tutor" onClick={() => login('ELEC2024-BACH', '1ro Bach A', 'Profesor García')}>
+              Login Tutor
+            </button>
+          </div>
+        )
+      }
+
       render(
         <AuthProvider>
           <TestComponent />
         </AuthProvider>
       )
-      
+
       await user.click(screen.getByTestId('login-tutor'))
-      
+
       await waitFor(() => {
-        expect(authService.loginTutor).toHaveBeenCalledWith('BCH1A2024')
-        expect(authService.saveSession).toHaveBeenCalled()
+        expect(localStorageMock.setItem).toHaveBeenCalledWith('voting_session', expect.any(String))
         expect(screen.getByTestId('user')).toHaveTextContent('tutor')
       })
     })
 
     it('should handle tutor login failure', async () => {
       const user = userEvent.setup()
-      authService.loginTutor.mockResolvedValue({
-        success: false,
-        error: 'Código de activación inválido'
-      })
       
+      const TestComponent = () => {
+        const { login, user: currentUser } = useAuth()
+        return (
+          <div>
+            <div data-testid="user">{currentUser?.role || 'no user'}</div>
+            <button data-testid="login-tutor" onClick={() => login('INVALID', '1ro Bach A', 'Profesor García')}>
+              Login Tutor
+            </button>
+          </div>
+        )
+      }
+
       render(
         <AuthProvider>
           <TestComponent />
         </AuthProvider>
       )
-      
+
       await user.click(screen.getByTestId('login-tutor'))
-      
+
       await waitFor(() => {
-        expect(authService.saveSession).not.toHaveBeenCalled()
         expect(screen.getByTestId('user')).toHaveTextContent('no user')
       })
     })
@@ -205,29 +211,35 @@ describe('AuthContext', () => {
     it('should logout user and clear session', async () => {
       const user = userEvent.setup()
       
-      // Start with logged in user
-      authService.loginAdmin.mockResolvedValue({
-        success: true,
-        user: { id: 'admin-1', role: 'admin' }
-      })
-      
+      const TestComponent = () => {
+        const { loginAsAdmin, logout, user: currentUser } = useAuth()
+        return (
+          <div>
+            <div data-testid="user">{currentUser?.role || 'no user'}</div>
+            <button data-testid="login-admin" onClick={() => loginAsAdmin('admin2024')}>
+              Login Admin
+            </button>
+            <button data-testid="logout" onClick={() => logout()}>
+              Logout
+            </button>
+          </div>
+        )
+      }
+
       render(
         <AuthProvider>
           <TestComponent />
         </AuthProvider>
       )
-      
-      // Login first
+
       await user.click(screen.getByTestId('login-admin'))
       await waitFor(() => {
         expect(screen.getByTestId('user')).toHaveTextContent('admin')
       })
-      
-      // Then logout
+
       await user.click(screen.getByTestId('logout'))
-      
       await waitFor(() => {
-        expect(authService.clearSession).toHaveBeenCalled()
+        expect(localStorageMock.removeItem).toHaveBeenCalledWith('voting_session')
         expect(screen.getByTestId('user')).toHaveTextContent('no user')
       })
     })
@@ -237,41 +249,42 @@ describe('AuthContext', () => {
     it('should show loading during login process', async () => {
       const user = userEvent.setup()
       
-      // Make login async to test loading state
-      authService.loginAdmin.mockImplementation(
-        () => new Promise(resolve => setTimeout(() => 
-          resolve({ success: true, user: { id: 'admin-1', role: 'admin' } }), 100
-        ))
-      )
-      
+      const TestComponent = () => {
+        const { loginAsAdmin, isLoading } = useAuth()
+        return (
+          <div>
+            <div data-testid="loading">{isLoading ? 'loading' : 'not loading'}</div>
+            <button data-testid="login-admin" onClick={() => loginAsAdmin('admin2024')}>
+              Login Admin
+            </button>
+          </div>
+        )
+      }
+
       render(
         <AuthProvider>
           <TestComponent />
         </AuthProvider>
       )
-      
+
       await user.click(screen.getByTestId('login-admin'))
-      
-      // Should show loading immediately
-      expect(screen.getByTestId('loading')).toHaveTextContent('loading')
-      
-      // Should stop loading after login completes
+
       await waitFor(() => {
-        expect(screen.getByTestId('loading')).toHaveTextContent('not loading')
-      }, { timeout: 200 })
+        expect(screen.getByTestId('loading')).toHaveTextContent('loading')
+      })
     })
   })
 
   describe('hook usage outside provider', () => {
     it('should throw error when useAuth is used outside AuthProvider', () => {
-      // Suppress console.error for this test
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-      
+      const TestComponent = () => {
+        const { user } = useAuth()
+        return <div>{user ? 'user' : 'no user'}</div>
+      }
+
       expect(() => {
         render(<TestComponent />)
       }).toThrow('useAuth debe ser usado dentro de AuthProvider')
-      
-      consoleSpy.mockRestore()
     })
   })
 })

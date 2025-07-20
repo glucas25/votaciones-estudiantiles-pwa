@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { StudentsProvider } from './contexts/StudentsContext';
 import { CandidatesProvider } from './contexts/CandidatesContext';
@@ -10,6 +10,7 @@ import TutorPanel from './components/tutor/TutorPanel';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import AdminDashboard from './components/admin/AdminDashboard';
 import DatabaseTest from './components/common/DatabaseTest';
+import migrationService from './services/migration.js';
 import './App.css';
 
 const AdminPanel = ({ user }) => (
@@ -189,9 +190,79 @@ const AppContent = () => {
 };
 
 const App = () => {
+  const [migrationStatus, setMigrationStatus] = useState({
+    checked: false,
+    inProgress: false,
+    completed: false,
+    error: null
+  });
+
+  // Check and perform migration on app startup
+  useEffect(() => {
+    const checkAndPerformMigration = async () => {
+      try {
+        setMigrationStatus(prev => ({ ...prev, checked: true }));
+        
+        const migrationNeeded = await migrationService.isMigrationNeeded();
+        console.log('🔍 Migration needed:', migrationNeeded);
+        
+        if (migrationNeeded) {
+          console.log('🔄 Starting automatic migration...');
+          setMigrationStatus(prev => ({ ...prev, inProgress: true }));
+          
+          const result = await migrationService.startMigration();
+          console.log('✅ Migration completed:', result);
+          
+          setMigrationStatus(prev => ({ 
+            ...prev, 
+            inProgress: false, 
+            completed: true 
+          }));
+        } else {
+          console.log('ℹ️ No migration needed');
+          setMigrationStatus(prev => ({ 
+            ...prev, 
+            completed: true 
+          }));
+        }
+      } catch (error) {
+        console.error('❌ Migration failed:', error);
+        setMigrationStatus(prev => ({ 
+          ...prev, 
+          inProgress: false, 
+          error: error.message 
+        }));
+      }
+    };
+
+    // Run migration check after a short delay to ensure services are ready
+    setTimeout(checkAndPerformMigration, 1000);
+  }, []);
+
+  // Show migration status while in progress
+  if (!migrationStatus.checked || migrationStatus.inProgress) {
+    return (
+      <div className="App">
+        <LoadingSpinner 
+          message={
+            migrationStatus.inProgress 
+              ? "Migrando datos a PouchDB..." 
+              : "Iniciando sistema..."
+          } 
+        />
+      </div>
+    );
+  }
+
   return (
     <AuthProvider>
       <div className="App">
+        {migrationStatus.error && (
+          <div className="migration-error-banner">
+            <p>⚠️ Error en migración: {migrationStatus.error}</p>
+            <p>El sistema funcionará con datos locales.</p>
+          </div>
+        )}
         <AppContent />
       </div>
     </AuthProvider>

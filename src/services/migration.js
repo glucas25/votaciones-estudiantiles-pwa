@@ -1,5 +1,5 @@
 // src/services/migration.js
-import databaseService, { DOC_TYPES, EDUCATION_LEVELS } from './database.js'
+import databaseService, { DOC_TYPES, EDUCATION_LEVELS } from './database-indexeddb.js'
 
 /**
  * Migration service to transfer data from localStorage to PouchDB

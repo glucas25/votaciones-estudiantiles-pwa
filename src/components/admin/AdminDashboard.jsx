@@ -1,6 +1,7 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import StudentManager from './StudentManager';
+import { useDatabase, useStudents, useCandidates } from '../../hooks/useDatabase.js';
 import './AdminDashboard.css';
 
 // Contexto para datos de administración
@@ -190,34 +191,153 @@ const mockStudents = [
 // Componente principal del Dashboard
 function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  
+  // Database hooks
+  const { isReady, connectionStatus } = useDatabase();
+  const { 
+    students: dbStudents, 
+    loading: studentsLoading,
+    addStudent,
+    updateStudent,
+    deleteStudent,
+    importStudents
+  } = useStudents();
+  const { 
+    candidates: dbCandidates, 
+    loading: candidatesLoading,
+    addCandidate,
+    updateCandidate,
+    deleteCandidate
+  } = useCandidates();
+
+  // Local state with fallback to mock data
   const [candidates, setCandidates] = useState(mockCandidates);
   const [students, setStudents] = useState(mockStudents);
   const [stats, setStats] = useState(mockStats);
 
+  // Use database data when available, fallback to mock
+  useEffect(() => {
+    if (isReady && !studentsLoading && dbStudents.length > 0) {
+      console.log('📊 Using database students:', dbStudents);
+      setStudents(dbStudents);
+    } else if (!studentsLoading) {
+      console.log('📊 Using mock students for testing');
+      // Keep mock students for testing
+    }
+  }, [isReady, studentsLoading, dbStudents]);
+
+  useEffect(() => {
+    if (isReady && !candidatesLoading && dbCandidates.length > 0) {
+      console.log('🏆 Using database candidates:', dbCandidates);
+      setCandidates(dbCandidates);
+    } else if (!candidatesLoading) {
+      console.log('🏆 Using mock candidates for testing');
+      // Keep mock candidates for testing
+    }
+  }, [isReady, candidatesLoading, dbCandidates]);
+
   // Student management functions
-  const handleStudentAdd = (newStudent) => {
-    setStudents([...students, { ...newStudent, id: `student_${Date.now()}` }]);
+  const handleStudentAdd = async (newStudent) => {
+    if (isReady && addStudent) {
+      try {
+        const result = await addStudent(newStudent);
+        if (result.success) {
+          console.log('✅ Student added to database');
+        } else {
+          throw new Error(result.error);
+        }
+      } catch (error) {
+        console.error('❌ Failed to add student to database:', error);
+        // Fallback to local state
+        setStudents([...students, { ...newStudent, id: `student_${Date.now()}` }]);
+      }
+    } else {
+      // Fallback to local state
+      setStudents([...students, { ...newStudent, id: `student_${Date.now()}` }]);
+    }
   };
 
-  const handleStudentUpdate = (updatedStudent) => {
-    setStudents(students.map(s => s.id === updatedStudent.id ? updatedStudent : s));
+  const handleStudentUpdate = async (updatedStudent) => {
+    if (isReady && updateStudent) {
+      try {
+        const result = await updateStudent(updatedStudent);
+        if (result.success) {
+          console.log('✅ Student updated in database');
+        } else {
+          throw new Error(result.error);
+        }
+      } catch (error) {
+        console.error('❌ Failed to update student in database:', error);
+        // Fallback to local state
+        setStudents(students.map(s => s.id === updatedStudent.id ? updatedStudent : s));
+      }
+    } else {
+      // Fallback to local state
+      setStudents(students.map(s => s.id === updatedStudent.id ? updatedStudent : s));
+    }
   };
 
-  const handleStudentDelete = (studentId) => {
-    setStudents(students.filter(s => s.id !== studentId));
+  const handleStudentDelete = async (studentId) => {
+    if (isReady && deleteStudent) {
+      try {
+        const student = students.find(s => s.id === studentId);
+        if (student && student._rev) {
+          const result = await deleteStudent(studentId, student._rev);
+          if (result.success) {
+            console.log('✅ Student deleted from database');
+          } else {
+            throw new Error(result.error);
+          }
+        } else {
+          throw new Error('Student not found or missing revision');
+        }
+      } catch (error) {
+        console.error('❌ Failed to delete student from database:', error);
+        // Fallback to local state
+        setStudents(students.filter(s => s.id !== studentId));
+      }
+    } else {
+      // Fallback to local state
+      setStudents(students.filter(s => s.id !== studentId));
+    }
   };
 
-  const handleBulkImport = (importedStudents) => {
+  const handleBulkImport = async (importedStudents) => {
     console.log('📊 Importing students:', importedStudents);
-    const studentsWithIds = importedStudents.map((student, index) => ({
-      ...student,
-      id: student.id || `student_${Date.now()}_${index}`,
-      created: student.created || new Date().toISOString()
-    }));
     
-    const updatedStudents = [...students, ...studentsWithIds];
-    console.log('✅ Updated students list:', updatedStudents);
-    setStudents(updatedStudents);
+    if (isReady && importStudents) {
+      try {
+        const result = await importStudents(importedStudents);
+        if (result.success) {
+          console.log('✅ Students imported to database:', result);
+        } else {
+          throw new Error(result.error);
+        }
+      } catch (error) {
+        console.error('❌ Failed to import students to database:', error);
+        // Fallback to local state
+        const studentsWithIds = importedStudents.map((student, index) => ({
+          ...student,
+          id: student.id || `student_${Date.now()}_${index}`,
+          created: student.created || new Date().toISOString()
+        }));
+        
+        const updatedStudents = [...students, ...studentsWithIds];
+        console.log('✅ Updated students list (local fallback):', updatedStudents);
+        setStudents(updatedStudents);
+      }
+    } else {
+      // Fallback to local state
+      const studentsWithIds = importedStudents.map((student, index) => ({
+        ...student,
+        id: student.id || `student_${Date.now()}_${index}`,
+        created: student.created || new Date().toISOString()
+      }));
+      
+      const updatedStudents = [...students, ...studentsWithIds];
+      console.log('✅ Updated students list (local fallback):', updatedStudents);
+      setStudents(updatedStudents);
+    }
   };
 
   return (

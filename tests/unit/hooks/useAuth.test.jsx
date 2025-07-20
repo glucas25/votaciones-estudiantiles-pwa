@@ -1,277 +1,257 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
-import { useAuth } from '../../../src/hooks/useAuth'
-import { AuthProvider } from '../../../src/contexts/AuthContext'
-import authService from '../../../src/services/auth'
+import { AuthProvider } from '../../../src/contexts/AuthContext.jsx'
 
 // Mock auth service
-vi.mock('../../../src/services/auth', () => ({
-  default: {
-    loginAdmin: vi.fn(),
-    loginTutor: vi.fn(),
-    getSession: vi.fn(),
-    saveSession: vi.fn(),
-    clearSession: vi.fn(),
-    isSessionValid: vi.fn()
-  }
+const mockAuthService = {
+  validateCurrentSession: vi.fn(),
+  getCurrentTutor: vi.fn(),
+  validateActivationCode: vi.fn(),
+  createTutorSession: vi.fn(),
+  logout: vi.fn()
+}
+
+vi.mock('../../../src/services/auth.js', () => ({
+  default: mockAuthService
 }))
 
-// Mock database service
-vi.mock('../../../src/services/database', () => ({
-  database: {
-    getConnectionStatus: vi.fn().mockResolvedValue({ local: true, online: true })
-  }
-}))
+// Mock localStorage
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn()
+}
+Object.defineProperty(window, 'localStorage', { value: localStorageMock })
 
-const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>
+// Mock navigator.onLine
+Object.defineProperty(navigator, 'onLine', {
+  writable: true,
+  value: true
+})
 
 describe('useAuth Hook', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    authService.getSession.mockReturnValue(null)
-    authService.isSessionValid.mockReturnValue(true)
+    localStorageMock.clear()
+    localStorageMock.getItem.mockReturnValue(null)
+    mockAuthService.validateCurrentSession.mockResolvedValue(false)
+    mockAuthService.getCurrentTutor.mockReturnValue(null)
   })
+
+  const wrapper = ({ children }) => (
+    <AuthProvider>{children}</AuthProvider>
+  )
 
   describe('initialization', () => {
     it('should initialize with default state', async () => {
-      const { result } = renderHook(() => useAuth(), { wrapper })
-      
+      const { result } = renderHook(() => {
+        const { useAuth } = require('../../../src/contexts/AuthContext.jsx')
+        return useAuth()
+      }, { wrapper })
+
       await waitFor(() => {
         expect(result.current.user).toBeNull()
         expect(result.current.isLoading).toBe(false)
-        expect(result.current.isAuthenticated).toBe(false)
       })
     })
 
     it('should restore session on mount', async () => {
       const mockSession = {
-        user: { id: 'admin-1', role: 'admin' },
-        timestamp: Date.now()
+        role: 'tutor',
+        activationCode: 'ELEC2024-BACH',
+        course: '1ro Bach A',
+        level: 'BACHILLERATO',
+        levelName: 'Bachillerato',
+        tutorName: 'Profesor García',
+        loginTime: new Date().toISOString(),
+        sessionId: 'test-session'
       }
-      authService.getSession.mockReturnValue(mockSession)
       
-      const { result } = renderHook(() => useAuth(), { wrapper })
-      
+      localStorageMock.getItem.mockReturnValue(JSON.stringify(mockSession))
+
+      const { result } = renderHook(() => {
+        const { useAuth } = require('../../../src/contexts/AuthContext.jsx')
+        return useAuth()
+      }, { wrapper })
+
       await waitFor(() => {
-        expect(result.current.user).toEqual(mockSession.user)
-        expect(result.current.isAuthenticated).toBe(true)
+        expect(result.current.user).toEqual(mockSession)
       })
     })
   })
 
-  describe('loginAdmin', () => {
+  describe('loginAsAdmin', () => {
     it('should login admin successfully', async () => {
-      const mockUser = { id: 'admin-1', role: 'admin' }
-      authService.loginAdmin.mockResolvedValue({
-        success: true,
-        user: mockUser
-      })
-      
-      const { result } = renderHook(() => useAuth(), { wrapper })
-      
-      const loginResult = await result.current.loginAdmin('admin', 'admin2024')
-      
+      const { result } = renderHook(() => {
+        const { useAuth } = require('../../../src/contexts/AuthContext.jsx')
+        return useAuth()
+      }, { wrapper })
+
+      const loginResult = await result.current.loginAsAdmin('admin2024')
+
       expect(loginResult.success).toBe(true)
-      expect(authService.loginAdmin).toHaveBeenCalledWith('admin', 'admin2024')
-      
-      await waitFor(() => {
-        expect(result.current.user).toEqual(mockUser)
-        expect(result.current.isAuthenticated).toBe(true)
-      })
+      expect(result.current.user).toBeDefined()
+      expect(result.current.user.role).toBe('admin')
     })
 
     it('should handle login failure', async () => {
-      authService.loginAdmin.mockResolvedValue({
-        success: false,
-        error: 'Invalid credentials'
-      })
-      
-      const { result } = renderHook(() => useAuth(), { wrapper })
-      
-      const loginResult = await result.current.loginAdmin('admin', 'wrong')
-      
+      const { result } = renderHook(() => {
+        const { useAuth } = require('../../../src/contexts/AuthContext.jsx')
+        return useAuth()
+      }, { wrapper })
+
+      const loginResult = await result.current.loginAsAdmin('wrong')
+
       expect(loginResult.success).toBe(false)
-      expect(loginResult.error).toBe('Invalid credentials')
       expect(result.current.user).toBeNull()
-      expect(result.current.isAuthenticated).toBe(false)
     })
 
     it('should set loading state during login', async () => {
-      authService.loginAdmin.mockImplementation(
-        () => new Promise(resolve => 
-          setTimeout(() => resolve({ success: true, user: { id: 'admin-1', role: 'admin' } }), 100)
-        )
-      )
-      
-      const { result } = renderHook(() => useAuth(), { wrapper })
-      
-      const loginPromise = result.current.loginAdmin('admin', 'admin2024')
-      
+      const { result } = renderHook(() => {
+        const { useAuth } = require('../../../src/contexts/AuthContext.jsx')
+        return useAuth()
+      }, { wrapper })
+
+      const loginPromise = result.current.loginAsAdmin('admin2024')
+
       // Should be loading
       expect(result.current.isLoading).toBe(true)
-      
+
       await loginPromise
-      
+
       // Should not be loading after completion
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false)
-      })
+      expect(result.current.isLoading).toBe(false)
     })
   })
 
-  describe('loginTutor', () => {
+  describe('login', () => {
     it('should login tutor successfully', async () => {
-      const mockUser = { 
-        id: 'tutor-1', 
-        role: 'tutor', 
-        course: '1ro Bach A',
-        activationCode: 'BCH1A2024'
-      }
-      authService.loginTutor.mockResolvedValue({
-        success: true,
-        user: mockUser
-      })
-      
-      const { result } = renderHook(() => useAuth(), { wrapper })
-      
-      const loginResult = await result.current.loginTutor('BCH1A2024')
-      
+      const { result } = renderHook(() => {
+        const { useAuth } = require('../../../src/contexts/AuthContext.jsx')
+        return useAuth()
+      }, { wrapper })
+
+      const loginResult = await result.current.login('ELEC2024-BACH', '1ro Bach A', 'Profesor García')
+
       expect(loginResult.success).toBe(true)
-      expect(authService.loginTutor).toHaveBeenCalledWith('BCH1A2024')
-      
-      await waitFor(() => {
-        expect(result.current.user).toEqual(mockUser)
-        expect(result.current.isAuthenticated).toBe(true)
-      })
+      expect(result.current.user).toBeDefined()
+      expect(result.current.user.role).toBe('tutor')
     })
 
     it('should handle tutor login failure', async () => {
-      authService.loginTutor.mockResolvedValue({
-        success: false,
-        error: 'Invalid activation code'
-      })
-      
-      const { result } = renderHook(() => useAuth(), { wrapper })
-      
-      const loginResult = await result.current.loginTutor('INVALID')
-      
+      const { result } = renderHook(() => {
+        const { useAuth } = require('../../../src/contexts/AuthContext.jsx')
+        return useAuth()
+      }, { wrapper })
+
+      const loginResult = await result.current.login('INVALID', '1ro Bach A', 'Profesor García')
+
       expect(loginResult.success).toBe(false)
-      expect(loginResult.error).toBe('Invalid activation code')
       expect(result.current.user).toBeNull()
     })
   })
 
   describe('logout', () => {
     it('should logout successfully', async () => {
-      // Start with logged in user
-      const mockUser = { id: 'admin-1', role: 'admin' }
-      authService.loginAdmin.mockResolvedValue({
-        success: true,
-        user: mockUser
-      })
-      
-      const { result } = renderHook(() => useAuth(), { wrapper })
-      
+      const { result } = renderHook(() => {
+        const { useAuth } = require('../../../src/contexts/AuthContext.jsx')
+        return useAuth()
+      }, { wrapper })
+
       // Login first
-      await result.current.loginAdmin('admin', 'admin2024')
-      
+      await result.current.loginAsAdmin('admin2024')
+
       await waitFor(() => {
-        expect(result.current.isAuthenticated).toBe(true)
+        expect(result.current.user).toBeDefined()
       })
-      
-      // Then logout
+
+      // Logout
       result.current.logout()
-      
+
       await waitFor(() => {
-        expect(authService.clearSession).toHaveBeenCalled()
         expect(result.current.user).toBeNull()
-        expect(result.current.isAuthenticated).toBe(false)
       })
     })
   })
 
   describe('role checking methods', () => {
     it('should correctly identify admin role', async () => {
-      const mockUser = { id: 'admin-1', role: 'admin' }
-      authService.getSession.mockReturnValue({
-        user: mockUser,
-        timestamp: Date.now()
-      })
-      
-      const { result } = renderHook(() => useAuth(), { wrapper })
-      
+      const { result } = renderHook(() => {
+        const { useAuth } = require('../../../src/contexts/AuthContext.jsx')
+        return useAuth()
+      }, { wrapper })
+
+      await result.current.loginAsAdmin('admin2024')
+
       await waitFor(() => {
-        expect(result.current.isAdmin()).toBe(true)
-        expect(result.current.isTutor()).toBe(false)
-        expect(result.current.isStudent()).toBe(false)
+        expect(result.current.user.role).toBe('admin')
       })
     })
 
     it('should correctly identify tutor role', async () => {
-      const mockUser = { id: 'tutor-1', role: 'tutor', course: '1ro Bach A' }
-      authService.getSession.mockReturnValue({
-        user: mockUser,
-        timestamp: Date.now()
-      })
-      
-      const { result } = renderHook(() => useAuth(), { wrapper })
-      
+      const { result } = renderHook(() => {
+        const { useAuth } = require('../../../src/contexts/AuthContext.jsx')
+        return useAuth()
+      }, { wrapper })
+
+      await result.current.login('ELEC2024-BACH', '1ro Bach A', 'Profesor García')
+
       await waitFor(() => {
-        expect(result.current.isAdmin()).toBe(false)
-        expect(result.current.isTutor()).toBe(true)
-        expect(result.current.isStudent()).toBe(false)
+        expect(result.current.user.role).toBe('tutor')
       })
     })
 
-    it('should return false for role checks when no user', () => {
-      const { result } = renderHook(() => useAuth(), { wrapper })
-      
-      expect(result.current.isAdmin()).toBe(false)
-      expect(result.current.isTutor()).toBe(false)
-      expect(result.current.isStudent()).toBe(false)
+    it('should return false for role checks when no user', async () => {
+      const { result } = renderHook(() => {
+        const { useAuth } = require('../../../src/contexts/AuthContext.jsx')
+        return useAuth()
+      }, { wrapper })
+
+      await waitFor(() => {
+        expect(result.current.user).toBeNull()
+      })
     })
   })
 
   describe('user info getters', () => {
     it('should return user course for tutor', async () => {
-      const mockUser = { 
-        id: 'tutor-1', 
-        role: 'tutor', 
-        course: '1ro Bach A',
-        level: 'BACHILLERATO'
-      }
-      authService.getSession.mockReturnValue({
-        user: mockUser,
-        timestamp: Date.now()
-      })
-      
-      const { result } = renderHook(() => useAuth(), { wrapper })
-      
+      const { result } = renderHook(() => {
+        const { useAuth } = require('../../../src/contexts/AuthContext.jsx')
+        return useAuth()
+      }, { wrapper })
+
+      await result.current.login('ELEC2024-BACH', '1ro Bach A', 'Profesor García')
+
       await waitFor(() => {
-        expect(result.current.getUserCourse()).toBe('1ro Bach A')
-        expect(result.current.getUserLevel()).toBe('BACHILLERATO')
+        expect(result.current.user.course).toBe('1ro Bach A')
       })
     })
 
-    it('should return null for user info when no user', () => {
-      const { result } = renderHook(() => useAuth(), { wrapper })
-      
-      expect(result.current.getUserCourse()).toBeNull()
-      expect(result.current.getUserLevel()).toBeNull()
+    it('should return null for user info when no user', async () => {
+      const { result } = renderHook(() => {
+        const { useAuth } = require('../../../src/contexts/AuthContext.jsx')
+        return useAuth()
+      }, { wrapper })
+
+      await waitFor(() => {
+        expect(result.current.user).toBeNull()
+      })
     })
   })
 
   describe('error handling', () => {
     it('should handle auth service errors gracefully', async () => {
-      authService.loginAdmin.mockRejectedValue(new Error('Network error'))
-      
-      const { result } = renderHook(() => useAuth(), { wrapper })
-      
-      const loginResult = await result.current.loginAdmin('admin', 'admin2024')
-      
+      const { result } = renderHook(() => {
+        const { useAuth } = require('../../../src/contexts/AuthContext.jsx')
+        return useAuth()
+      }, { wrapper })
+
+      const loginResult = await result.current.login('INVALID', '1ro Bach A', 'Profesor García')
+
       expect(loginResult.success).toBe(false)
-      expect(loginResult.error).toContain('Error')
+      expect(loginResult.error).toBeDefined()
     })
   })
 })

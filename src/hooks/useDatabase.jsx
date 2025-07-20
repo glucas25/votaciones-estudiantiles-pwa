@@ -48,21 +48,15 @@ export const useDatabase = () => {
     const initialize = async () => {
       try {
         // Importación dinámica para evitar errores de constructor durante el renderizado
-        const { database: db, initDatabase } = await import('../services/database-simple');
+        const { default: db } = await import('../services/database-indexeddb.js');
         
         // Verificar que database se importó correctamente
         if (!db) {
           throw new Error('No se pudo importar la configuración de base de datos');
         }
 
-        // Inicializar base de datos de forma defensiva
-        let initializedDB;
-        try {
-          initializedDB = await initDatabase();
-        } catch (initError) {
-          console.warn('⚠️ Error en initDatabase, usando database base:', initError.message);
-          initializedDB = db;
-        }
+        // Usar el database service directamente (ya está inicializado)
+        const initializedDB = db;
 
         setDatabase(initializedDB);
         setIsInitialized(true);
