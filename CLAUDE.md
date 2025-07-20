@@ -28,10 +28,12 @@ npm test
 ## Architecture
 
 ### Database Architecture
-- **PouchDB**: Local browser database for offline functionality
+- **IndexedDB**: Native browser database for offline functionality  
 - **Local-first**: App works completely offline with local data storage
+- **Data Transition System**: Robust mock ↔ real data management
 - Connection status displayed via `ConnectionStatus` component
-- Database service located in `src/services/database.js`
+- Database service located in `src/services/database-indexeddb.js`
+- Transition service located in `src/services/dataTransition.js`
 
 ### Application Structure
 - **Multi-role system**: Admin, Tutor, Student interfaces
@@ -42,7 +44,11 @@ npm test
 ### Component Organization
 ```
 src/components/
-├── admin/           # Administrator interface (planned)
+├── admin/           # Administrator interface (ACTIVE)
+│   ├── AdminDashboard.jsx          # Dashboard principal
+│   ├── StudentManager.jsx          # Gestión de estudiantes  
+│   ├── StudentImport.jsx           # Importación masiva
+│   └── DataTransitionPanel.jsx     # Panel transición datos
 ├── auth/            # Authentication components
 ├── common/          # Shared components (ConnectionStatus)
 ├── tutor/           # Tutor interface (active)
@@ -50,7 +56,10 @@ src/components/
 ```
 
 ### Key Services
-- `src/services/database.js`: PouchDB interface with CRUD operations
+- `src/services/database-indexeddb.js`: IndexedDB interface with CRUD operations
+- `src/services/dataTransition.js`: Sistema de transición mock ↔ real
+- `src/services/fileProcessor.js`: Procesamiento robusto CSV/Excel
+- `src/services/migration.js`: Migración automática de datos
 - `src/services/auth.js`: Authentication logic
 - `src/hooks/useDatabase.jsx`: Database React hook
 - `src/hooks/useAuth.jsx`: Authentication React hook
@@ -70,9 +79,12 @@ src/components/
 
 ### Current Implementation Status
 - ✅ Tutor interface and authentication
-- 🚧 Admin interface (placeholder alerts)
+- ✅ **Admin interface with full dashboard functionality**
+- ✅ **Data transition system (mock ↔ real)**
+- ✅ **Bulk import for 600-1000 students**
+- ✅ **Automatic backup and rollback system**
 - 🚧 Student interface (placeholder alerts)
-- ✅ Database service and offline support
+- ✅ Database service and offline support (IndexedDB)
 - ✅ Local development setup and PWA configuration
 
 ### Testing Structure

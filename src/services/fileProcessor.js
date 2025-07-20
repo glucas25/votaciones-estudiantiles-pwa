@@ -6,11 +6,13 @@ import * as XLSX from 'xlsx';
 
 // File processing configuration
 const CONFIG = {
-  MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
-  CHUNK_SIZE: 100, // Process 100 rows at a time
+  MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB para datasets grandes
+  CHUNK_SIZE: 50, // Process 50 rows at a time para mejor performance
   SUPPORTED_FORMATS: ['.csv', '.xlsx', '.xls'],
   ENCODINGS: ['UTF-8', 'ISO-8859-1', 'Windows-1252'],
-  CSV_DELIMITERS: [',', ';', '\t', '|']
+  CSV_DELIMITERS: [',', ';', '\t', '|'],
+  MAX_STUDENTS: 1000, // Límite máximo de estudiantes
+  VALIDATION_SAMPLE_SIZE: 10 // Validar una muestra de registros para datasets grandes
 };
 
 // Expected column mappings (flexible column naming)
@@ -109,17 +111,21 @@ const detectCSVDelimiter = (csvText) => {
  */
 const mapColumns = (headers) => {
   const mapping = {};
-  const normalizedHeaders = headers.map(h => h.toLowerCase().trim());
+  const normalizedHeaders = headers.map(h => String(h).toLowerCase().trim());
   
   Object.entries(COLUMN_MAPPINGS).forEach(([standardName, variants]) => {
     const foundIndex = normalizedHeaders.findIndex(header => 
-      variants.some(variant => header.includes(variant))
+      variants.some(variant => header === variant || header.includes(variant))
     );
     
     if (foundIndex !== -1) {
-      mapping[headers[foundIndex]] = standardName;
+      mapping[standardName] = foundIndex; // Map to column index instead of header name
     }
   });
+  
+  console.log('🗺️ Column mapping result:', mapping);
+  console.log('📋 Original headers:', headers);
+  console.log('🔧 Normalized headers:', normalizedHeaders);
   
   return mapping;
 };
@@ -155,7 +161,7 @@ const processCSVFile = async (file, onProgress = null, onChunk = null) => {
           
           // Validate that we have required columns
           const requiredFields = ['cedula', 'nombres', 'apellidos', 'curso', 'nivel'];
-          const mappedFields = Object.values(columnMapping);
+          const mappedFields = Object.keys(columnMapping);
           const missingFields = requiredFields.filter(field => !mappedFields.includes(field));
           
           if (missingFields.length > 0) {
@@ -163,13 +169,14 @@ const processCSVFile = async (file, onProgress = null, onChunk = null) => {
             reject(new Error(`Columnas requeridas no encontradas: ${missingFields.join(', ')}`));
             return;
           }
+          
+          console.log('✅ All required columns found:', mappedFields);
         } else {
           // Process data row
           const rowData = {};
-          headers.forEach((header, index) => {
-            const standardField = columnMapping[header];
-            if (standardField) {
-              rowData[standardField] = result.data[index];
+          Object.entries(columnMapping).forEach(([standardField, columnIndex]) => {
+            if (result.data[columnIndex] !== undefined) {
+              rowData[standardField] = result.data[columnIndex];
             }
           });
           

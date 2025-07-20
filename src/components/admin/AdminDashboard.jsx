@@ -1,6 +1,8 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import StudentManager from './StudentManager';
+import DataTransitionPanel from './DataTransitionPanel';
+import DatabaseInspector from './DatabaseInspector';
 import { useDatabase, useStudents, useCandidates } from '../../hooks/useDatabase.js';
 import './AdminDashboard.css';
 
@@ -210,29 +212,35 @@ function AdminDashboard() {
     deleteCandidate
   } = useCandidates();
 
-  // Local state with fallback to mock data
-  const [candidates, setCandidates] = useState(mockCandidates);
-  const [students, setStudents] = useState(mockStudents);
+  // Local state - starts empty, filled from database
+  const [candidates, setCandidates] = useState([]);
+  const [students, setStudents] = useState([]);
   const [stats, setStats] = useState(mockStats);
 
-  // Use database data when available, fallback to mock
+  // Sync with database data
   useEffect(() => {
-    if (isReady && !studentsLoading && dbStudents.length > 0) {
-      console.log('📊 Using database students:', dbStudents);
+    if (isReady && !studentsLoading) {
+      console.log('📊 Database ready, syncing students. DB count:', dbStudents.length);
+      // Always use database data (including empty array) when database is ready
       setStudents(dbStudents);
-    } else if (!studentsLoading) {
-      console.log('📊 Using mock students for testing');
-      // Keep mock students for testing
+      
+      // If database is empty, offer to load mock data for development
+      if (dbStudents.length === 0) {
+        console.log('📊 Database is empty. Use "Reset a Mock" in Transition tab to load test data if needed.');
+      }
     }
   }, [isReady, studentsLoading, dbStudents]);
 
   useEffect(() => {
-    if (isReady && !candidatesLoading && dbCandidates.length > 0) {
-      console.log('🏆 Using database candidates:', dbCandidates);
+    if (isReady && !candidatesLoading) {
+      console.log('🏆 Database ready, syncing candidates. DB count:', dbCandidates.length);
+      // Always use database data (including empty array) when database is ready
       setCandidates(dbCandidates);
-    } else if (!candidatesLoading) {
-      console.log('🏆 Using mock candidates for testing');
-      // Keep mock candidates for testing
+      
+      // If database is empty, offer to load mock data for development
+      if (dbCandidates.length === 0) {
+        console.log('🏆 Database is empty. Use "Reset a Mock" in Transition tab to load test data if needed.');
+      }
     }
   }, [isReady, candidatesLoading, dbCandidates]);
 
@@ -278,27 +286,39 @@ function AdminDashboard() {
   };
 
   const handleStudentDelete = async (studentId) => {
+    console.log('🗑️ Attempting to delete student:', studentId);
+    console.log('🔍 Available students:', students);
+    
     if (isReady && deleteStudent) {
       try {
-        const student = students.find(s => s.id === studentId);
-        if (student && student._rev) {
-          const result = await deleteStudent(studentId, student._rev);
+        // Find student by either id or _id
+        const student = students.find(s => s.id === studentId || s._id === studentId);
+        console.log('🎯 Found student for deletion:', student);
+        
+        if (student) {
+          // Use the correct ID field for database operations
+          const dbId = student._id || student.id;
+          const rev = student._rev;
+          
+          console.log('🔑 Using DB ID:', dbId, 'with rev:', rev);
+          
+          const result = await deleteStudent(dbId, rev);
           if (result.success) {
             console.log('✅ Student deleted from database');
+            // The useStudents hook will automatically update dbStudents
+            // which will trigger the useEffect and update local state
+            // No need to manually update state here
           } else {
             throw new Error(result.error);
           }
         } else {
-          throw new Error('Student not found or missing revision');
+          console.log('⚠️ Student not found in database');
         }
       } catch (error) {
         console.error('❌ Failed to delete student from database:', error);
-        // Fallback to local state
-        setStudents(students.filter(s => s.id !== studentId));
       }
     } else {
-      // Fallback to local state
-      setStudents(students.filter(s => s.id !== studentId));
+      console.log('⚠️ Database not ready for deletion');
     }
   };
 
@@ -375,6 +395,12 @@ function AdminDashboard() {
             👥 Estudiantes
           </button>
           <button 
+            className={activeTab === 'transition' ? 'active' : ''}
+            onClick={() => setActiveTab('transition')}
+          >
+            🔄 Transición
+          </button>
+          <button 
             className={activeTab === 'candidates' ? 'active' : ''}
             onClick={() => setActiveTab('candidates')}
           >
@@ -392,15 +418,23 @@ function AdminDashboard() {
           >
             ⚙️ Configuración
           </button>
+          <button 
+            className={activeTab === 'database' ? 'active' : ''}
+            onClick={() => setActiveTab('database')}
+          >
+            🔍 Base de Datos
+          </button>
         </nav>
 
         {/* Content */}
         <main className="admin-content">
           {activeTab === 'dashboard' && <DashboardTab />}
           {activeTab === 'students' && <StudentsTab />}
+          {activeTab === 'transition' && <TransitionTab />}
           {activeTab === 'candidates' && <CandidatesTab />}
           {activeTab === 'reports' && <ReportsTab />}
           {activeTab === 'config' && <ConfigTab />}
+          {activeTab === 'database' && <DatabaseTab />}
         </main>
       </div>
     </AdminContext.Provider>
@@ -590,6 +624,24 @@ function StudentsTab() {
         onStudentDelete={handleStudentDelete}
         onBulkImport={handleBulkImport}
       />
+    </div>
+  );
+}
+
+// Tab de transición de datos
+function TransitionTab() {
+  const { students, setStudents } = useContext(AdminContext);
+
+  const handleDataChanged = () => {
+    // Recargar datos después de una transición
+    console.log('🔄 Datos cambiados, recargando...');
+    // Trigger refresh of student data
+    window.location.reload(); // Simple refresh for now
+  };
+
+  return (
+    <div className="transition-tab">
+      <DataTransitionPanel onDataChanged={handleDataChanged} />
     </div>
   );
 }
@@ -1029,6 +1081,15 @@ Escriba "CONFIRMAR" para proceder:`;
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Tab de inspector de base de datos
+function DatabaseTab() {
+  return (
+    <div className="database-tab">
+      <DatabaseInspector />
     </div>
   );
 }

@@ -14,62 +14,28 @@ export const EDUCATION_LEVELS = {
   'BACH': 'BACHILLERATO'
 };
 
-// Course patterns by education level
-const COURSE_PATTERNS = {
-  BASICA_ELEMENTAL: /^[1-4]to\s+[A-Z]$/i, // 1ro A, 2do B, etc.
-  BASICA_MEDIA: /^[5-7]mo\s+[A-Z]$/i,    // 5to A, 6to B, 7mo A, etc.
-  BASICA_SUPERIOR: /^[8-9]vo\s+[A-Z]$|^10mo\s+[A-Z]$/i, // 8vo A, 9no A, 10mo A
-  BACHILLERATO: /^[1-3]ro\s+Bach\s+[A-Z]$/i // 1ro Bach A, 2do Bach B, etc.
-};
+// Course patterns removed - now accepts any course format
 
 /**
- * Validates Ecuadorian national ID (cedula)
- * Algorithm based on Ecuador's official validation rules
+ * Validates ID (simplified - no Ecuador algorithm validation)
+ * Accepts any numeric identifier
  */
-export const validateEcuadorianID = (cedula) => {
-  if (!cedula || typeof cedula !== 'string') {
-    return { valid: false, error: 'Cédula es requerida' };
+export const validateID = (cedula) => {
+  if (!cedula) {
+    return { valid: false, error: 'Cédula/ID es requerida' };
   }
 
-  // Remove any non-numeric characters
-  const cleanCedula = cedula.replace(/\D/g, '');
+  // Convert to string and clean
+  const cleanCedula = String(cedula).trim();
   
-  if (cleanCedula.length !== 10) {
-    return { valid: false, error: 'Cédula debe tener exactamente 10 dígitos' };
+  if (cleanCedula.length === 0) {
+    return { valid: false, error: 'Cédula/ID no puede estar vacía' };
   }
 
-  // Province code validation (first 2 digits: 01-24, 30)
-  const provinceCode = parseInt(cleanCedula.substring(0, 2));
-  if ((provinceCode < 1 || provinceCode > 24) && provinceCode !== 30) {
-    return { valid: false, error: 'Código de provincia inválido en cédula' };
-  }
-
-  // Third digit must be less than 6 for natural persons
-  const thirdDigit = parseInt(cleanCedula.charAt(2));
-  if (thirdDigit >= 6) {
-    return { valid: false, error: 'Cédula no corresponde a persona natural' };
-  }
-
-  // Validate check digit using Ecuador's algorithm
-  const coefficients = [2, 1, 2, 1, 2, 1, 2, 1, 2];
-  let sum = 0;
-
-  for (let i = 0; i < 9; i++) {
-    let product = parseInt(cleanCedula.charAt(i)) * coefficients[i];
-    if (product >= 10) {
-      product = product.toString().split('').reduce((acc, digit) => acc + parseInt(digit), 0);
-    }
-    sum += product;
-  }
-
-  const checkDigit = ((Math.ceil(sum / 10) * 10) - sum) % 10;
-  const lastDigit = parseInt(cleanCedula.charAt(9));
-
-  if (checkDigit !== lastDigit) {
-    return { valid: false, error: 'Dígito verificador de cédula inválido' };
-  }
-
-  return { valid: true, cleaned: cleanCedula };
+  // Accept any format - just clean and normalize
+  const normalized = cleanCedula.replace(/\s+/g, ''); // Remove extra spaces
+  
+  return { valid: true, cleaned: normalized };
 };
 
 /**
@@ -107,7 +73,7 @@ export const validateAndNormalizeName = (name, fieldName = 'Nombre') => {
 };
 
 /**
- * Validates course format and consistency with education level
+ * Validates course format (flexible - accepts any format)
  */
 export const validateCourse = (course, level) => {
   if (!course || typeof course !== 'string') {
@@ -115,21 +81,15 @@ export const validateCourse = (course, level) => {
   }
 
   const trimmed = course.trim();
-  if (!level || !EDUCATION_LEVELS[level.toUpperCase()]) {
-    return { valid: false, error: 'Nivel educativo inválido' };
+  
+  if (trimmed.length === 0) {
+    return { valid: false, error: 'Curso no puede estar vacío' };
   }
 
-  const normalizedLevel = EDUCATION_LEVELS[level.toUpperCase()];
-  const pattern = COURSE_PATTERNS[normalizedLevel];
+  // Accept any course format - just normalize spacing
+  const normalized = trimmed.replace(/\s+/g, ' '); // Clean up extra spaces
 
-  if (!pattern || !pattern.test(trimmed)) {
-    return { 
-      valid: false, 
-      error: `Formato de curso inválido para nivel ${normalizedLevel}` 
-    };
-  }
-
-  return { valid: true, normalized: trimmed };
+  return { valid: true, normalized };
 };
 
 /**
@@ -180,12 +140,17 @@ export const validateYear = (year) => {
  * Comprehensive student validation
  */
 export const validateStudent = (studentData, existingCedulas = new Set()) => {
+  console.log('🔍 Validating student:', studentData);
+  
   const errors = [];
   const warnings = [];
   const normalized = {};
 
   // Validate cedula
-  const cedulaResult = validateEcuadorianID(studentData.cedula);
+  console.log('📋 Validating cedula:', studentData.cedula);
+  const cedulaResult = validateID(studentData.cedula);
+  console.log('🔍 Cedula validation result:', cedulaResult);
+  
   if (!cedulaResult.valid) {
     errors.push(`Cédula: ${cedulaResult.error}`);
   } else {
@@ -222,8 +187,10 @@ export const validateStudent = (studentData, existingCedulas = new Set()) => {
   }
 
   // Validate course (depends on level)
+  console.log('🏫 Validating course:', studentData.curso, 'for level:', normalized.nivel);
   if (normalized.nivel) {
     const courseResult = validateCourse(studentData.curso, normalized.nivel);
+    console.log('🔍 Course validation result:', courseResult);
     if (!courseResult.valid) {
       errors.push(`Curso: ${courseResult.error}`);
     } else {

@@ -543,7 +543,9 @@ const StudentManager = ({
               </button>
               <button 
                 onClick={() => {
-                  onStudentDelete?.(showDeleteConfirm.id);
+                  const studentId = showDeleteConfirm._id || showDeleteConfirm.id;
+                  console.log('🗑️ StudentManager deleting:', studentId, showDeleteConfirm);
+                  onStudentDelete?.(studentId);
                   setShowDeleteConfirm(null);
                 }}
                 className="btn-danger"
