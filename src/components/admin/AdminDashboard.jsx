@@ -1,9 +1,8 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import StudentManager from './StudentManager';
-import DataTransitionPanel from './DataTransitionPanel';
 import DatabaseInspector from './DatabaseInspector';
-import EducationLevelsManager from './EducationLevelsManager';
+import LevelStatsViewer from './LevelStatsViewer';
 import ActivationCodesManager from './ActivationCodesManager';
 import { useDatabase, useStudents, useCandidates } from '../../hooks/useDatabase.js';
 import databaseService, { DOC_TYPES } from '../../services/database-indexeddb.js';
@@ -424,12 +423,6 @@ function AdminDashboard() {
             👥 Estudiantes
           </button>
           <button 
-            className={activeTab === 'transition' ? 'active' : ''}
-            onClick={() => setActiveTab('transition')}
-          >
-            🔄 Transición
-          </button>
-          <button 
             className={activeTab === 'candidates' ? 'active' : ''}
             onClick={() => setActiveTab('candidates')}
           >
@@ -457,7 +450,7 @@ function AdminDashboard() {
             className={activeTab === 'levels' ? 'active' : ''}
             onClick={() => setActiveTab('levels')}
           >
-            📚 Niveles Educativos
+            📊 Estadísticas por Nivel
           </button>
           <button 
             className={activeTab === 'codes' ? 'active' : ''}
@@ -471,12 +464,11 @@ function AdminDashboard() {
         <main className="admin-content">
           {activeTab === 'dashboard' && <DashboardTab />}
           {activeTab === 'students' && <StudentsTab />}
-          {activeTab === 'transition' && <TransitionTab />}
           {activeTab === 'candidates' && <CandidatesTab />}
           {activeTab === 'reports' && <ReportsTab />}
           {activeTab === 'config' && <ConfigTab />}
           {activeTab === 'database' && <DatabaseTab />}
-          {activeTab === 'levels' && <EducationLevelsManager />}
+          {activeTab === 'levels' && <LevelStatsViewer />}
           {activeTab === 'codes' && <ActivationCodesManager />}
         </main>
       </div>
@@ -725,23 +717,6 @@ function StudentsTab() {
   );
 }
 
-// Tab de transición de datos
-function TransitionTab() {
-  const { students, setStudents } = useContext(AdminContext);
-
-  const handleDataChanged = () => {
-    // Recargar datos después de una transición
-    console.log('🔄 Datos cambiados, recargando...');
-    // Trigger refresh of student data
-    window.location.reload(); // Simple refresh for now
-  };
-
-  return (
-    <div className="transition-tab">
-      <DataTransitionPanel onDataChanged={handleDataChanged} />
-    </div>
-  );
-}
 
 // Tab de gestión de candidatos
 function CandidatesTab() {
@@ -1420,27 +1395,6 @@ Eliminados:
       )}
       
       <div className="config-sections">
-        <div className="config-section">
-          <h3>🔑 Códigos de Activación</h3>
-          <div className="activation-codes">
-            <div className="code-item">
-              <span className="code">ELEC2024-BACH</span>
-              <span className="level">Bachillerato</span>
-              <span className="status active">✅ Activo</span>
-            </div>
-            <div className="code-item">
-              <span className="code">ELEC2024-BASICA-SUP</span>
-              <span className="level">Básica Superior</span>
-              <span className="status active">✅ Activo</span>
-            </div>
-            <div className="code-item">
-              <span className="code">ELEC2024-BASICA-MEDIA</span>
-              <span className="level">Básica Media</span>
-              <span className="status inactive">❌ Inactivo</span>
-            </div>
-          </div>
-          <button className="btn-primary">➕ Nuevo Código</button>
-        </div>
 
         <div className="config-section">
           <h3>📅 Fechas y Horarios</h3>

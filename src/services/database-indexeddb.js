@@ -5,7 +5,7 @@ console.log('🔧 Initializing IndexedDB service...')
 
 // Database configuration
 const DB_NAME = 'votaciones_estudiantiles_2024'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 // Object stores (tables)
 const STORES = {
