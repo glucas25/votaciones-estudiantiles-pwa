@@ -85,9 +85,14 @@ const MOCK_CANDIDATES_TEMPLATE = [
     apellidos: "Morales Jiménez",
     cargo: "PRESIDENTE",
     level: "BACHILLERATO",
+    nivel: "BACHILLERATO", // Add nivel field for consistency
+    lista: "Lista Azul", // Add lista field
     ticketId: "ticket_1",
+    color: "#2563eb", // Add color field
     foto: "",
-    propuestas: "Mejora de infraestructura estudiantil",
+    propuestas: ["Mejora de infraestructura estudiantil", "Más áreas deportivas", "Laboratorios modernos"],
+    slogan: "Juntos hacia la excelencia",
+    experiencia: "2 años como delegada de curso",
     votos: 0
   },
   {
@@ -95,9 +100,14 @@ const MOCK_CANDIDATES_TEMPLATE = [
     apellidos: "García López",
     cargo: "VICEPRESIDENTE", 
     level: "BACHILLERATO",
+    nivel: "BACHILLERATO",
+    lista: "Lista Azul",
     ticketId: "ticket_1",
+    color: "#2563eb",
     foto: "",
-    propuestas: "Más actividades extracurriculares",
+    propuestas: ["Más actividades extracurriculares", "Club de robótica", "Intercambios estudiantiles"],
+    slogan: "Innovación y tradición",
+    experiencia: "Capitán del equipo de debate",
     votos: 0
   },
   {
@@ -105,9 +115,14 @@ const MOCK_CANDIDATES_TEMPLATE = [
     apellidos: "Cruz Silva",
     cargo: "PRESIDENTE",
     level: "BASICA_SUPERIOR",
+    nivel: "BASICA_SUPERIOR",
+    lista: "Lista Verde",
     ticketId: "ticket_2",
+    color: "#10b981",
     foto: "",
-    propuestas: "Mejor alimentación escolar",
+    propuestas: ["Mejor alimentación escolar", "Huertos estudiantiles", "Comida saludable"],
+    slogan: "Creciendo juntos",
+    experiencia: "Líder del comité ambiental",
     votos: 0
   },
   {
@@ -115,9 +130,14 @@ const MOCK_CANDIDATES_TEMPLATE = [
     apellidos: "Mendez Torres",
     cargo: "VICEPRESIDENTE",
     level: "BASICA_SUPERIOR", 
+    nivel: "BASICA_SUPERIOR",
+    lista: "Lista Verde",
     ticketId: "ticket_2",
+    color: "#10b981",
     foto: "",
-    propuestas: "Más espacios recreativos",
+    propuestas: ["Más espacios recreativos", "Canchas multiuso", "Área de descanso"],
+    slogan: "Diversión y aprendizaje",
+    experiencia: "Coordinador de eventos deportivos",
     votos: 0
   },
   {
@@ -125,9 +145,14 @@ const MOCK_CANDIDATES_TEMPLATE = [
     apellidos: "Ramírez Vargas",
     cargo: "PRESIDENTE",
     level: "BASICA_MEDIA",
+    nivel: "BASICA_MEDIA",
+    lista: "Lista Roja",
     ticketId: "ticket_3",
+    color: "#dc2626",
     foto: "",
-    propuestas: "Tecnología en aulas",
+    propuestas: ["Tecnología en aulas", "Tablets para estudiantes", "Aulas inteligentes"],
+    slogan: "El futuro es digital",
+    experiencia: "Monitora de informática",
     votos: 0
   },
   {
@@ -135,9 +160,14 @@ const MOCK_CANDIDATES_TEMPLATE = [
     apellidos: "López Castro",
     cargo: "VICEPRESIDENTE",
     level: "BASICA_MEDIA",
+    nivel: "BASICA_MEDIA",
+    lista: "Lista Roja",
     ticketId: "ticket_3", 
+    color: "#dc2626",
     foto: "",
-    propuestas: "Bibliotecas digitales",
+    propuestas: ["Bibliotecas digitales", "E-books gratuitos", "Acceso a internet"],
+    slogan: "Conocimiento para todos",
+    experiencia: "Ayudante de biblioteca",
     votos: 0
   }
 ];

@@ -1,16 +1,15 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import StudentManager from './StudentManager';
 import DatabaseInspector from './DatabaseInspector';
-import LevelStatsViewer from './LevelStatsViewer';
 import ActivationCodesManager from './ActivationCodesManager';
+import ElectionConfigurator from './ElectionConfigurator';
+import CandidateListManager from './CandidateListManager';
+import AdminContext from '../../contexts/AdminContext';
 import { useDatabase, useStudents, useCandidates } from '../../hooks/useDatabase.js';
 import databaseService, { DOC_TYPES } from '../../services/database-indexeddb.js';
 import activationCodesService from '../../services/activationCodes.js';
 import './AdminDashboard.css';
-
-// Contexto para datos de administración
-const AdminContext = createContext();
 
 
 // Default stats structure
@@ -259,132 +258,6 @@ function AdminDashboard() {
     }
   };
 
-  // Function to add test data for debugging
-  const addTestData = async () => {
-    console.log('🧪 Adding test data...');
-    
-    const testStudents = [
-      {
-        _id: 'student_001',
-        type: DOC_TYPES.STUDENT,
-        cedula: '1234567001',
-        nombres: 'Juan Carlos',
-        apellidos: 'Pérez García',
-        course: '1ro Bach A',
-        curso: '1ro Bach A',
-        level: 'BACHILLERATO',
-        nivel: 'BACHILLERATO',
-        numero: 1,
-        createdAt: new Date().toISOString()
-      },
-      {
-        _id: 'student_002', 
-        type: DOC_TYPES.STUDENT,
-        cedula: '1234567002',
-        nombres: 'María José',
-        apellidos: 'González López',
-        course: '1ro Bach A',
-        curso: '1ro Bach A',
-        level: 'BACHILLERATO',
-        nivel: 'BACHILLERATO',
-        numero: 2,
-        createdAt: new Date().toISOString()
-      },
-      {
-        _id: 'student_003',
-        type: DOC_TYPES.STUDENT,
-        cedula: '1234567003',
-        nombres: 'Pedro Andrés',
-        apellidos: 'Martínez Silva',
-        course: '1ro Bach A',
-        curso: '1ro Bach A',
-        level: 'BACHILLERATO',
-        nivel: 'BACHILLERATO',
-        numero: 3,
-        createdAt: new Date().toISOString()
-      },
-      {
-        _id: 'student_004',
-        type: DOC_TYPES.STUDENT,
-        cedula: '1234567004',
-        nombres: 'Ana Lucía',
-        apellidos: 'Rodríguez Torres',
-        course: '1ro Bach B',
-        curso: '1ro Bach B',
-        level: 'BACHILLERATO',
-        nivel: 'BACHILLERATO',
-        numero: 1,
-        createdAt: new Date().toISOString()
-      },
-      {
-        _id: 'student_005',
-        type: DOC_TYPES.STUDENT,
-        cedula: '1234567005',
-        nombres: 'Carlos Eduardo',
-        apellidos: 'Vásquez Morales',
-        course: '1ro Bach B',
-        curso: '1ro Bach B',
-        level: 'BACHILLERATO',
-        nivel: 'BACHILLERATO',
-        numero: 2,
-        createdAt: new Date().toISOString()
-      },
-      {
-        _id: 'student_006',
-        type: DOC_TYPES.STUDENT,
-        cedula: '1234567006',
-        nombres: 'Sofía Valentina',
-        apellidos: 'Herrera Castro',
-        course: '8vo A',
-        curso: '8vo A',
-        level: 'BASICA_SUPERIOR',
-        nivel: 'BASICA_SUPERIOR',
-        numero: 1,
-        createdAt: new Date().toISOString()
-      },
-      {
-        _id: 'student_007',
-        type: DOC_TYPES.STUDENT,
-        cedula: '1234567007',
-        nombres: 'Diego Alejandro',
-        apellidos: 'Jiménez Ruiz',
-        course: '8vo A',
-        curso: '8vo A',
-        level: 'BASICA_SUPERIOR',
-        nivel: 'BASICA_SUPERIOR',
-        numero: 2,
-        createdAt: new Date().toISOString()
-      }
-    ];
-
-    if (isReady) {
-      try {
-        for (const student of testStudents) {
-          try {
-            const result = await databaseService.createDocument('students', student, DOC_TYPES.STUDENT);
-            if (result.success) {
-              console.log(`✅ Added test student: ${student.nombres} ${student.apellidos}`);
-            }
-          } catch (error) {
-            if (error.message && error.message.includes('already exists')) {
-              console.log(`⚠️ Test student already exists: ${student.nombres} ${student.apellidos}`);
-            } else {
-              console.error(`❌ Error adding test student ${student.nombres}:`, error);
-            }
-          }
-        }
-        console.log('🎉 Finished adding test data');
-        
-        // Force refresh of students data
-        window.location.reload();
-        
-      } catch (error) {
-        console.error('❌ Error adding test data:', error);
-      }
-    } else {
-      console.log('⚠️ Database not ready');
-    }
-  };
 
   return (
     <AdminContext.Provider value={{ 
@@ -396,7 +269,6 @@ function AdminDashboard() {
       handleStudentUpdate, 
       handleStudentDelete,
       handleBulkImport,
-      addTestData
     }}>
       <div className="admin-container">
         {/* Header */}
@@ -447,12 +319,6 @@ function AdminDashboard() {
             🔍 Base de Datos
           </button>
           <button 
-            className={activeTab === 'levels' ? 'active' : ''}
-            onClick={() => setActiveTab('levels')}
-          >
-            📊 Estadísticas por Nivel
-          </button>
-          <button 
             className={activeTab === 'codes' ? 'active' : ''}
             onClick={() => setActiveTab('codes')}
           >
@@ -468,7 +334,6 @@ function AdminDashboard() {
           {activeTab === 'reports' && <ReportsTab />}
           {activeTab === 'config' && <ConfigTab />}
           {activeTab === 'database' && <DatabaseTab />}
-          {activeTab === 'levels' && <LevelStatsViewer />}
           {activeTab === 'codes' && <ActivationCodesManager />}
         </main>
       </div>
@@ -478,35 +343,37 @@ function AdminDashboard() {
 
 // Tab del Dashboard principal
 function DashboardTab() {
-  const { stats, students, addTestData } = useContext(AdminContext);
+  const { stats, students } = useContext(AdminContext);
   
   return (
     <div className="dashboard-tab">
-      {/* Debug section - show if no students */}
+      {/* Empty state message - show if no students */}
       {students.length === 0 && (
-        <section className="debug-section" style={{ 
-          background: '#fff3cd', 
-          border: '1px solid #ffeaa7', 
-          borderRadius: '8px', 
-          padding: '15px', 
-          marginBottom: '20px' 
+        <section className="empty-state-section" style={{ 
+          background: '#f8f9fa', 
+          border: '2px dashed #dee2e6', 
+          borderRadius: '12px', 
+          padding: '40px 20px', 
+          marginBottom: '30px',
+          textAlign: 'center'
         }}>
-          <h3>🧪 DEBUG: No hay estudiantes en la base de datos</h3>
-          <p>Para probar el sistema, puedes añadir datos de prueba:</p>
-          <button 
-            onClick={addTestData}
-            style={{
-              background: '#2ecc71',
-              color: 'white',
-              border: 'none',
-              padding: '10px 20px',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            🧪 AÑADIR DATOS DE PRUEBA
-          </button>
+          <div style={{ fontSize: '3rem', marginBottom: '20px' }}>📊</div>
+          <h3 style={{ color: '#6c757d', marginBottom: '15px' }}>Sistema Listo para Iniciar</h3>
+          <p style={{ color: '#6c757d', marginBottom: '20px' }}>
+            No hay estudiantes registrados. Importe los datos desde la pestaña "👥 Estudiantes" para comenzar.
+          </p>
+          <div style={{ 
+            background: '#e3f2fd', 
+            padding: '15px', 
+            borderRadius: '8px', 
+            fontSize: '0.9rem',
+            color: '#1565c0'
+          }}>
+            <strong>Pasos para iniciar:</strong><br/>
+            1. Vaya a "👥 Estudiantes" → Importar archivo CSV/Excel<br/>
+            2. Registre candidatos en "🏆 Candidatos"<br/>
+            3. Genere códigos en "🔑 Códigos Activación"
+          </div>
         </section>
       )}
 
@@ -718,218 +585,9 @@ function StudentsTab() {
 }
 
 
-// Tab de gestión de candidatos
+// Tab de gestión de listas de candidatos
 function CandidatesTab() {
-  const { candidates, setCandidates } = useContext(AdminContext);
-  const [showForm, setShowForm] = useState(false);
-  const [editingCandidate, setEditingCandidate] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const handleEdit = (candidate) => {
-    setEditingCandidate(candidate);
-    setShowForm(true);
-  };
-
-  const handleDelete = async (candidateId) => {
-    if (window.confirm('¿Está seguro de eliminar este candidato?')) {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        // Find the candidate to get its database info
-        const candidate = candidates.find(c => c.id === candidateId || c._id === candidateId);
-        if (!candidate) {
-          throw new Error('Candidato no encontrado');
-        }
-        
-        const dbId = candidate._id || candidateId;
-        const rev = candidate._rev;
-        
-        if (!rev) {
-          // If no _rev, it might be a local-only candidate
-          setCandidates(candidates.filter(c => (c.id || c._id) !== candidateId));
-          return;
-        }
-        
-        const result = await databaseService.deleteDocument('candidates', dbId, rev);
-        
-        if (result.success) {
-          // Remove from local state
-          setCandidates(candidates.filter(c => (c.id || c._id) !== candidateId));
-          console.log('✅ Candidato eliminado de la base de datos');
-        } else {
-          throw new Error(result.error || 'Error al eliminar candidato');
-        }
-      } catch (err) {
-        console.error('❌ Error al eliminar candidato:', err);
-        setError('Error al eliminar candidato: ' + err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  return (
-    <div className="candidates-tab">
-      <div className="candidates-header">
-        <h2>🏆 GESTIÓN DE CANDIDATOS</h2>
-        <div className="candidates-controls">
-          <button 
-            className="btn-primary"
-            onClick={() => {
-              setEditingCandidate(null);
-              setShowForm(true);
-            }}
-            disabled={loading}
-          >
-            ➕ Nuevo Candidato
-          </button>
-          {loading && <span className="loading-indicator">⏳ Guardando...</span>}
-        </div>
-      </div>
-      
-      {error && (
-        <div className="error-message">
-          ❌ {error}
-          <button onClick={() => setError(null)}>✕</button>
-        </div>
-      )}
-
-      {showForm && (
-        <CandidateForm 
-          candidate={editingCandidate}
-          onSave={async (candidateData) => {
-            setLoading(true);
-            setError(null);
-            
-            try {
-              if (editingCandidate) {
-                // Update existing candidate
-                const dbId = editingCandidate._id;
-                const rev = editingCandidate._rev;
-                
-                if (dbId && rev) {
-                  const result = await databaseService.updateDocument(
-                    'candidates', 
-                    dbId, 
-                    rev, 
-                    candidateData, 
-                    DOC_TYPES.CANDIDATE
-                  );
-                  
-                  if (result.success) {
-                    // Update local state with new data
-                    setCandidates(candidates.map(c => 
-                      (c.id || c._id) === (editingCandidate.id || editingCandidate._id) 
-                        ? { ...candidateData, _id: result.doc._id, _rev: result.doc._rev }
-                        : c
-                    ));
-                    console.log('✅ Candidato actualizado en la base de datos');
-                  } else {
-                    throw new Error(result.error || 'Error al actualizar candidato');
-                  }
-                } else {
-                  // Local-only update
-                  setCandidates(candidates.map(c => 
-                    (c.id || c._id) === (editingCandidate.id || editingCandidate._id) 
-                      ? { ...candidateData, id: editingCandidate.id }
-                      : c
-                  ));
-                }
-              } else {
-                // Create new candidate
-                const result = await databaseService.createDocument(
-                  'candidates', 
-                  candidateData, 
-                  DOC_TYPES.CANDIDATE
-                );
-                
-                if (result.success) {
-                  // Add to local state with database info
-                  setCandidates([...candidates, {
-                    ...candidateData,
-                    _id: result.doc._id,
-                    _rev: result.doc._rev
-                  }]);
-                  console.log('✅ Candidato creado en la base de datos');
-                } else {
-                  throw new Error(result.error || 'Error al crear candidato');
-                }
-              }
-              
-              setShowForm(false);
-              setEditingCandidate(null);
-            } catch (err) {
-              console.error('❌ Error al guardar candidato:', err);
-              setError('Error al guardar candidato: ' + err.message);
-            } finally {
-              setLoading(false);
-            }
-          }}
-          onCancel={() => {
-            setShowForm(false);
-            setEditingCandidate(null);
-          }}
-        />
-      )}
-
-      <div className="candidates-grid">
-        {candidates.length === 0 ? (
-          <div className="empty-state">
-            <h3>📋 No hay candidatos registrados</h3>
-            <p>Haga clic en "Nuevo Candidato" para agregar el primer candidato.</p>
-          </div>
-        ) : (
-          candidates.map(candidate => {
-            const candidateId = candidate._id || candidate.id;
-            const isFromDb = !!candidate._id;
-            
-            return (
-              <div key={candidateId} className="candidate-card">
-                <div className="candidate-status">
-                  {isFromDb ? '💾 Base de Datos' : '📝 Local'}
-                </div>
-                <img 
-                  src={candidate.foto || '/placeholder-avatar.png'} 
-                  alt={candidate.nombre || 'Candidato'} 
-                  className="candidate-photo"
-                  onError={(e) => {
-                    e.target.src = '/placeholder-avatar.png';
-                  }}
-                />
-                <div className="candidate-details">
-                  <h3>{candidate.nombre || 'Nombre no especificado'}</h3>
-                  <p className="candidate-position">{candidate.cargo || 'Cargo no especificado'}</p>
-                  <p className="candidate-list" style={{color: candidate.color || '#666'}}>
-                    {candidate.lista || candidate.ticketId || 'Lista no especificada'}
-                  </p>
-                  <p className="candidate-level">Nivel: {candidate.nivel || candidate.level || 'No especificado'}</p>
-                  <p className="candidate-votes">Votos: {candidate.votos || 0}</p>
-                  <div className="candidate-actions">
-                    <button 
-                      onClick={() => handleEdit(candidate)} 
-                      className="btn-edit"
-                      disabled={loading}
-                    >
-                      ✏️ Editar
-                    </button>
-                    <button 
-                      onClick={() => handleDelete(candidateId)} 
-                      className="btn-delete"
-                      disabled={loading}
-                    >
-                      🗑️ Eliminar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-    </div>
-  );
+  return <CandidateListManager />;
 }
 
 // Formulario de candidatos
@@ -1372,7 +1030,9 @@ Eliminados:
 
   return (
     <div className="config-tab">
-      <h2>⚙️ CONFIGURACIÓN DEL SISTEMA</h2>
+      <div className="config-header">
+        <h2>⚙️ CONFIGURACIÓN DEL SISTEMA</h2>
+      </div>
       
       {loading && (
         <div className="global-loading">
@@ -1394,110 +1054,101 @@ Eliminados:
         </div>
       )}
       
-      <div className="config-sections">
-
-        <div className="config-section">
-          <h3>📅 Fechas y Horarios</h3>
-          <div className="date-config">
-            <div className="date-item">
-              <label>Inicio de Votación:</label>
-              <input type="datetime-local" defaultValue="2024-03-15T08:00" />
+      <div className="config-content">
+        {/* Configuración de Elección - Componente principal */}
+        <ElectionConfigurator />
+        
+        {/* Configuraciones del Sistema adicionales */}
+        <div className="config-sections">
+          <div className="config-section">
+            <h3>🔄 Sincronización</h3>
+            <div className="sync-config">
+              <div className="sync-item">
+                <span>Estado del Servidor:</span>
+                <span className="status online">🟢 En línea</span>
+              </div>
+              <div className="sync-item">
+                <span>Última Sincronización:</span>
+                <span>14:29:45</span>
+              </div>
+              <div className="sync-item">
+                <span>Dispositivos Conectados:</span>
+                <span>22/24</span>
+              </div>
             </div>
-            <div className="date-item">
-              <label>Fin de Votación:</label>
-              <input type="datetime-local" defaultValue="2024-03-15T16:00" />
+            <button className="btn-primary">🔄 Sincronizar Ahora</button>
+          </div>
+
+          <div className="config-section">
+            <h3>💾 Backup y Seguridad</h3>
+            <div className="backup-config">
+              <button 
+                className="btn-backup"
+                onClick={handleCreateBackup}
+                disabled={loading}
+              >
+                💾 Crear Backup
+              </button>
+              <button 
+                className="btn-restore"
+                onClick={() => alert('🔍 Funcionalidad no disponible en esta versión')}
+                disabled={loading}
+              >
+                📥 Restaurar Backup
+              </button>
+              <button 
+                className="btn-export"
+                onClick={handleExportData}
+                disabled={loading}
+              >
+                📤 Exportar Datos
+              </button>
             </div>
           </div>
-        </div>
 
-        <div className="config-section">
-          <h3>🔄 Sincronización</h3>
-          <div className="sync-config">
-            <div className="sync-item">
-              <span>Estado del Servidor:</span>
-              <span className="status online">🟢 En línea</span>
-            </div>
-            <div className="sync-item">
-              <span>Última Sincronización:</span>
-              <span>14:29:45</span>
-            </div>
-            <div className="sync-item">
-              <span>Dispositivos Conectados:</span>
-              <span>22/24</span>
-            </div>
-          </div>
-          <button className="btn-primary">🔄 Sincronizar Ahora</button>
-        </div>
-
-        <div className="config-section">
-          <h3>💾 Backup y Seguridad</h3>
-          <div className="backup-config">
-            <button 
-              className="btn-backup"
-              onClick={handleCreateBackup}
-              disabled={loading}
-            >
-              💾 Crear Backup
-            </button>
-            <button 
-              className="btn-restore"
-              onClick={() => alert('🔍 Funcionalidad disponible en el Panel de Transición')}
-              disabled={loading}
-            >
-              📥 Restaurar Backup
-            </button>
-            <button 
-              className="btn-export"
-              onClick={handleExportData}
-              disabled={loading}
-            >
-              📤 Exportar Datos
-            </button>
-          </div>
-        </div>
-
-        <div className="config-section">
-          <h3>🔄 Nueva Elección</h3>
-          <div className="election-reset">
-            <div className="warning-box">
-              <h4>⚠️ ADVERTENCIA</h4>
-              <p>Esta acción eliminará <strong>TODOS</strong> los datos de la base de datos:</p>
-              <ul>
-                <li>• Todos los estudiantes importados</li>
-                <li>• Todos los candidatos registrados</li>
-                <li>• Todos los votos emitidos</li>
-                <li>• Todas las sesiones de votación</li>
-              </ul>
-              <p><strong>Los datos eliminados NO se pueden recuperar.</strong></p>
-            </div>
-            
-            {loading && (
-              <div className="loading-indicator">
-                ⏳ Eliminando datos de la base de datos...
+          <div className="config-section">
+            <h3>🔄 Nueva Elección</h3>
+            <div className="election-reset">
+              <div className="warning-box">
+                <h4>⚠️ ADVERTENCIA</h4>
+                <p>Esta acción eliminará <strong>TODOS</strong> los datos de la base de datos:</p>
+                <ul>
+                  <li>• Todos los estudiantes importados</li>
+                  <li>• Todos los candidatos registrados</li>
+                  <li>• Todos los votos emitidos</li>
+                  <li>• Todas las sesiones de votación</li>
+                </ul>
+                <p><strong>Los datos eliminados NO se pueden recuperar.</strong></p>
               </div>
-            )}
-            
-            {error && (
-              <div className="error-message">
-                ❌ {error}
-                <button onClick={() => setError(null)}>✕</button>
-              </div>
-            )}
-            
-            {success && (
-              <div className="success-message">
-                {success}
-                <button onClick={() => setSuccess(null)}>✕</button>
-              </div>
-            )}
-            
-            <button 
-              className="btn-danger-large"
-              onClick={handleNewElection}
-              disabled={loading}
-            >
-              🗳️ Iniciar Nueva Elección
-            </button>
+              
+              {loading && (
+                <div className="loading-indicator">
+                  ⏳ Eliminando datos de la base de datos...
+                </div>
+              )}
+              
+              {error && (
+                <div className="error-message">
+                  ❌ {error}
+                  <button onClick={() => setError(null)}>✕</button>
+                </div>
+              )}
+              
+              {success && (
+                <div className="success-message">
+                  {success}
+                  <button onClick={() => setSuccess(null)}>✕</button>
+                </div>
+              )}
+              
+              <button 
+                className="btn-danger-large"
+                onClick={handleNewElection}
+                disabled={loading}
+              >
+                🗳️ Iniciar Nueva Elección
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1513,5 +1164,6 @@ function DatabaseTab() {
     </div>
   );
 }
+
 
 export default AdminDashboard;

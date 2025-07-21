@@ -1,5 +1,131 @@
 /* src/components/voting/VoteConfirmation.css */
 
+/* Selected List Display */
+.selected-list-display {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  border: 3px solid #10b981;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+}
+
+.list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.list-header .list-color-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.list-header .list-name {
+  font-size: 1.3rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.list-candidates {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.list-candidates .candidate-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border-left: 4px solid #10b981;
+}
+
+.candidate-photo-container {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e9ecef;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.candidate-photo-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.candidate-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  color: white;
+}
+
+.candidate-photo-placeholder.president {
+  background: linear-gradient(135deg, #ffc107, #ffdb4d);
+}
+
+.candidate-photo-placeholder.vice-president {
+  background: linear-gradient(135deg, #17a2b8, #20c997);
+}
+
+.candidate-info {
+  flex: 1;
+}
+
+.candidate-role {
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6c757d;
+  margin-bottom: 4px;
+}
+
+.candidate-name {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #2c3e50;
+  margin: 0 0 4px 0;
+}
+
+.candidate-course {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin: 0;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .list-candidates .candidate-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+  
+  .candidate-info {
+    text-align: center;
+  }
+}
+
 .vote-confirmation {
   padding: 30px;
   background: #f8fafc;

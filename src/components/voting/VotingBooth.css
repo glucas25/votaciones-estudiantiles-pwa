@@ -187,6 +187,69 @@
   font-size: 0.9rem;
 }
 
+/* Error Screen Improvements */
+.error-details {
+  text-align: left;
+  max-width: 500px;
+  margin: 0 auto 30px auto;
+}
+
+.error-details p {
+  color: #6b7280;
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+}
+
+.troubleshooting {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 20px;
+  border-left: 4px solid #3b82f6;
+}
+
+.troubleshooting p {
+  color: #1f2937;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.troubleshooting ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.troubleshooting li {
+  color: #4b5563;
+  padding: 5px 0;
+  font-size: 0.95rem;
+}
+
+.error-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.retry-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.retry-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+}
+
 .return-btn {
   background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   color: white;

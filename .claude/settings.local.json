@@ -10,7 +10,8 @@
       "Bash(find:*)",
       "Bash(wc:*)",
       "Bash(du:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

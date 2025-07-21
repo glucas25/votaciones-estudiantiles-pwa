@@ -315,13 +315,43 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(true);
     
     try {
-      // El código ya fue validado en TutorLogin, solo crear la sesión
+      // Validar el código nuevamente para obtener el nivel correcto
+      let actualLevel = 'BACHILLERATO'; // Default fallback
+      let levelName = course;
+      
+      try {
+        const { default: activationCodesService } = await import('../services/activationCodes.js');
+        const validation = await activationCodesService.validateCode(activationCode);
+        
+        if (validation.valid && validation.data) {
+          actualLevel = validation.data.level || 'BACHILLERATO';
+          levelName = validation.data.level_name || validation.data.level || course;
+        }
+      } catch (err) {
+        console.warn('❌ Could not validate activation code for level, using fallback:', err.message);
+        // Fallback: detect level from course name
+        const courseStr = course.toLowerCase();
+        if (courseStr.includes('bach')) {
+          actualLevel = 'BACHILLERATO';
+          levelName = 'Bachillerato';
+        } else if (courseStr.match(/^(8vo|9no|10mo)/)) {
+          actualLevel = 'BASICA_SUPERIOR';
+          levelName = 'Básica Superior';
+        } else if (courseStr.match(/^(5to|6to|7mo)/)) {
+          actualLevel = 'BASICA_MEDIA';
+          levelName = 'Básica Media';
+        } else if (courseStr.match(/^(1ro|2do|3ro|4to)/) && !courseStr.includes('bach')) {
+          actualLevel = 'BASICA_ELEMENTAL';
+          levelName = 'Básica Elemental';
+        }
+      }
+      
       const session = {
         role: 'tutor',
         activationCode,
         course,
-        level: 'DYNAMIC', // Nivel será determinado por el sistema dinámico
-        levelName: course, // Usar el curso como nombre del nivel
+        level: actualLevel, // Use actual level from validation
+        levelName: levelName,
         tutorName: tutorName || `Tutor ${course}`,
         loginTime: new Date().toISOString(),
         sessionId: generateSessionId()

@@ -7,40 +7,39 @@ import './VoteConfirmation.css';
 const VoteConfirmation = ({ student, onConfirm, onCancel }) => {
   const { 
     selectedVotes, 
-    getCandidateById, 
+    getListById, 
     castVote,
-    getAvailableCargos 
+    candidates 
   } = useCandidates();
   const { markStudentAsVoted } = useStudents();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const cargos = getAvailableCargos();
+  // Get selected electoral list
+  const selectedListId = selectedVotes['electoral_list'];
+  const selectedList = selectedListId ? getListById(selectedListId) : null;
 
   const handleConfirm = async () => {
+    if (!selectedList) {
+      alert('❌ No hay lista seleccionada');
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
-      // Registrar votos para cada cargo
-      const voteRecords = [];
-      
-      for (const cargo of cargos) {
-        const candidateId = selectedVotes[cargo];
-        if (candidateId) {
-          const voteRecord = castVote(student.id, candidateId, cargo);
-          voteRecords.push(voteRecord);
-        }
-      }
+      // Cast vote for the selected list
+      const voteRecord = await castVote(student.id, selectedListId);
 
-      // Marcar estudiante como votado
+      // Mark student as voted
       markStudentAsVoted(student.id);
       
       setSubmitted(true);
       
-      // Simular delay de procesamiento
+      // Simulate processing delay
       setTimeout(() => {
-        onConfirm(voteRecords);
+        onConfirm(voteRecord);
       }, 2000);
       
     } catch (error) {
@@ -111,50 +110,68 @@ const VoteConfirmation = ({ student, onConfirm, onCancel }) => {
       </div>
 
       <div className="votes-summary">
-        <h2>🗳️ Resumen de Votos</h2>
-        <div className="votes-list">
-          {cargos.map(cargo => {
-            const candidateId = selectedVotes[cargo];
-            const candidate = candidateId ? getCandidateById(candidateId) : null;
-            
-            return (
-              <div key={cargo} className="vote-item">
-                <div className="vote-cargo">
-                  <h3>🏆 {cargo}</h3>
+        <h2>🗳️ Lista Electoral Seleccionada</h2>
+        <div className="selected-list-display">
+          {selectedList ? (
+            <div className="vote-item">
+              <div className="list-header">
+                <div 
+                  className="list-color-indicator"
+                  style={{ backgroundColor: selectedList.color }}
+                ></div>
+                <h3 className="list-name" style={{ color: selectedList.color }}>
+                  {selectedList.listName}
+                </h3>
+                <div className="vote-indicator">
+                  <span className="vote-checkmark">✓</span>
+                </div>
+              </div>
+              
+              <div className="list-candidates">
+                <div className="candidate-item">
+                  <div className="candidate-photo-container">
+                    {selectedList.presidentPhoto ? (
+                      <img 
+                        src={selectedList.presidentPhoto} 
+                        alt={selectedList.presidentName}
+                        className="candidate-photo-small"
+                      />
+                    ) : (
+                      <div className="candidate-photo-placeholder president">
+                        👑
+                      </div>
+                    )}
+                  </div>
+                  <div className="candidate-info">
+                    <div className="candidate-role">👑 PRESIDENTE</div>
+                    <h4 className="candidate-name">{selectedList.presidentName}</h4>
+                    {selectedList.presidentCourse && (
+                      <p className="candidate-course">📚 {selectedList.presidentCourse}</p>
+                    )}
+                  </div>
                 </div>
                 
-                {candidate ? (
-                  <div className="selected-candidate">
-                    <div className="candidate-summary">
-                      <div 
-                        className="candidate-photo-small"
-                        style={{ backgroundColor: candidate.color }}
-                      >
-                        {candidate.nombre.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                      </div>
-                      <div className="candidate-info">
-                        <h4 className="candidate-name">{candidate.nombre}</h4>
-                        <p 
-                          className="candidate-list"
-                          style={{ color: candidate.color }}
-                        >
-                          {candidate.lista}
-                        </p>
-                        <p className="candidate-slogan">"{candidate.slogan}"</p>
-                      </div>
-                    </div>
-                    <div className="vote-indicator">
-                      <span className="vote-checkmark">✓</span>
+                <div className="candidate-item">
+                  <div className="candidate-photo-container">
+                    <div className="candidate-photo-placeholder vice-president">
+                      🤝
                     </div>
                   </div>
-                ) : (
-                  <div className="no-selection">
-                    <p>❌ Sin selección para este cargo</p>
+                  <div className="candidate-info">
+                    <div className="candidate-role">🤝 VICEPRESIDENTE</div>
+                    <h4 className="candidate-name">{selectedList.vicePresidentName}</h4>
+                    {selectedList.vicePresidentCourse && (
+                      <p className="candidate-course">📚 {selectedList.vicePresidentCourse}</p>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
-            );
-          })}
+            </div>
+          ) : (
+            <div className="no-selection">
+              <p>❌ No hay lista electoral seleccionada</p>
+            </div>
+          )}
         </div>
       </div>
 

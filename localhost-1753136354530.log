@@ -1,0 +1,54 @@
+CandidatesContext.jsx:95 ✅ Successfully loaded electoral lists from database: 2 lists
+StudentCard.jsx:24 [Violation] 'setTimeout' handler took 1892ms
+TutorPanel.jsx:31 🎭 TutorPanel Debug: {userCourse: 'D cimo A', studentsCount: 15, totalInDB: 296, loading: false, error: null, …}
+TutorPanel.jsx:43 📊 TutorPanel Stats: {stats: {…}, pending: 15, voted: 0, absent: 0}
+TutorPanel.jsx:31 🎭 TutorPanel Debug: {userCourse: 'D cimo A', studentsCount: 15, totalInDB: 296, loading: false, error: null, …}
+TutorPanel.jsx:43 📊 TutorPanel Stats: {stats: {…}, pending: 15, voted: 0, absent: 0}
+VotingInterface.jsx:26 🗳️ VotingInterface render: {student: {…}, candidates: Array(2), selectedVotes: {…}, loading: false, error: null}
+VotingInterface.jsx:40 🏆 Electoral lists found: 2 (2) [{…}, {…}]
+VotingInterface.jsx:41 📋 All candidates data: (2) [{…}, {…}]
+VotingInterface.jsx:26 🗳️ VotingInterface render: {student: {…}, candidates: Array(2), selectedVotes: {…}, loading: false, error: null}
+VotingInterface.jsx:40 🏆 Electoral lists found: 2 (2) [{…}, {…}]
+VotingInterface.jsx:41 📋 All candidates data: (2) [{…}, {…}]
+VotingInterface.jsx:47 🧪 DIRECT DATABASE TEST: Querying candidates directly...
+VotingInterface.jsx:47 🧪 DIRECT DATABASE TEST: Querying candidates directly...
+VotingInterface.jsx:56 🧪 DIRECT QUERY ALL CANDIDATES: {success: true, docs: Array(2), total: 2}
+VotingInterface.jsx:56 🧪 DIRECT QUERY ALL CANDIDATES: {success: true, docs: Array(2), total: 2}
+VotingInterface.jsx:61 🧪 DIRECT QUERY LISTS ONLY: {success: true, docs: Array(0), total: 0}
+VotingInterface.jsx:61 🧪 DIRECT QUERY LISTS ONLY: {success: true, docs: Array(0), total: 0}
+VotingInterface.jsx:66 🧪 DIRECT QUERY CANDIDATE TYPE: {success: true, docs: Array(2), total: 2}
+VotingInterface.jsx:66 🧪 DIRECT QUERY CANDIDATE TYPE: {success: true, docs: Array(2), total: 2}
+VotingInterface.jsx:72 🧪 DIRECT QUERY WITH LISTNAME: {success: true, docs: Array(0), total: 0}
+VotingInterface.jsx:72 🧪 DIRECT QUERY WITH LISTNAME: {success: true, docs: Array(0), total: 0}
+VotingInterface.jsx:26 🗳️ VotingInterface render: {student: {…}, candidates: Array(2), selectedVotes: {…}, loading: false, error: null}
+VotingInterface.jsx:40 🏆 Electoral lists found: 2 (2) [{…}, {…}]
+VotingInterface.jsx:41 📋 All candidates data: (2) [{…}, {…}]
+VotingInterface.jsx:26 🗳️ VotingInterface render: {student: {…}, candidates: Array(2), selectedVotes: {…}, loading: false, error: null}
+VotingInterface.jsx:40 🏆 Electoral lists found: 2 (2) [{…}, {…}]
+VotingInterface.jsx:41 📋 All candidates data: (2) [{…}, {…}]
+VotingInterface.jsx:26 🗳️ VotingInterface render: {student: {…}, candidates: Array(2), selectedVotes: {…}, loading: false, error: null}
+VotingInterface.jsx:40 🏆 Electoral lists found: 2 (2) [{…}, {…}]
+VotingInterface.jsx:41 📋 All candidates data: (2) [{…}, {…}]
+VotingInterface.jsx:26 🗳️ VotingInterface render: {student: {…}, candidates: Array(2), selectedVotes: {…}, loading: false, error: null}
+VotingInterface.jsx:40 🏆 Electoral lists found: 2 (2) [{…}, {…}]
+VotingInterface.jsx:41 📋 All candidates data: (2) [{…}, {…}]
+database-indexeddb.js:163 ✅ Document created in votes: vote_doc_1753136318240_c2rkg14yi
+CandidatesContext.jsx:274 Successfully saved list-based votes to database
+StudentsContext.jsx:172 ✅ Estudiante marcado como votado: student_1127074650
+TutorPanel.jsx:31 🎭 TutorPanel Debug: {userCourse: 'D cimo A', studentsCount: 15, totalInDB: 296, loading: false, error: null, …}
+TutorPanel.jsx:43 📊 TutorPanel Stats: {stats: {…}, pending: 15, voted: 0, absent: 0}
+TutorPanel.jsx:31 🎭 TutorPanel Debug: {userCourse: 'D cimo A', studentsCount: 15, totalInDB: 296, loading: false, error: null, …}
+TutorPanel.jsx:43 📊 TutorPanel Stats: {stats: {…}, pending: 15, voted: 0, absent: 0}
+StudentsContext.jsx:172 ✅ Estudiante marcado como votado: student_1127074650
+TutorPanel.jsx:31 🎭 TutorPanel Debug: {userCourse: 'D cimo A', studentsCount: 15, totalInDB: 296, loading: false, error: null, …}
+TutorPanel.jsx:43 📊 TutorPanel Stats: {stats: {…}, pending: 15, voted: 0, absent: 0}
+TutorPanel.jsx:31 🎭 TutorPanel Debug: {userCourse: 'D cimo A', studentsCount: 15, totalInDB: 296, loading: false, error: null, …}
+TutorPanel.jsx:43 📊 TutorPanel Stats: {stats: {…}, pending: 15, voted: 0, absent: 0}
+TutorPanel.jsx:31 🎭 TutorPanel Debug: {userCourse: 'D cimo A', studentsCount: 15, totalInDB: 296, loading: false, error: null, …}
+TutorPanel.jsx:43 📊 TutorPanel Stats: {stats: {…}, pending: 15, voted: 0, absent: 0}
+TutorPanel.jsx:31 🎭 TutorPanel Debug: {userCourse: 'D cimo A', studentsCount: 15, totalInDB: 296, loading: false, error: null, …}
+TutorPanel.jsx:43 📊 TutorPanel Stats: {stats: {…}, pending: 15, voted: 0, absent: 0}
+TutorPanel.jsx:31 🎭 TutorPanel Debug: {userCourse: 'D cimo A', studentsCount: 15, totalInDB: 296, loading: false, error: null, …}
+TutorPanel.jsx:43 📊 TutorPanel Stats: {stats: {…}, pending: 15, voted: 0, absent: 0}
+TutorPanel.jsx:31 🎭 TutorPanel Debug: {userCourse: 'D cimo A', studentsCount: 15, totalInDB: 296, loading: false, error: null, …}
+TutorPanel.jsx:43 📊 TutorPanel Stats: {stats: {…}, pending: 15, voted: 0, absent: 0}

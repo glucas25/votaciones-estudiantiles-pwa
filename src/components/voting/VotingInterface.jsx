@@ -1,7 +1,8 @@
 // src/components/voting/VotingInterface.jsx
 import React, { useState, useEffect } from 'react';
 import { useCandidates } from '../../contexts/CandidatesContext';
-import CandidateCard from './CandidateCard';
+import { useElectionConfig } from '../../contexts/ElectionConfigContext';
+import ElectoralListCard from './ElectoralListCard';
 import './VotingInterface.css';
 
 const VotingInterface = ({ student, onSubmit }) => {
@@ -10,19 +11,35 @@ const VotingInterface = ({ student, onSubmit }) => {
     selectedVotes, 
     selectCandidate, 
     getSelectedCandidate,
-    getAvailableCargos,
     clearSelections,
     loading,
     error
   } = useCandidates();
 
+  const {
+    config,
+    getElectionTypeName,
+    isConfigLoaded
+  } = useElectionConfig();
+
   // Debug logging (can be removed in production)
-  // console.log('VotingInterface render:', { student, candidates, selectedVotes, loading, error });
+  console.log('🗳️ VotingInterface render:', { student, candidates, selectedVotes, loading, error });
   
-  const [currentCargo, setCurrentCargo] = useState('');
+  const [selectedList, setSelectedList] = useState(null);
   const [isComplete, setIsComplete] = useState(false);
   
-  const cargos = getAvailableCargos();
+  // Get electoral lists from candidates (support multiple detection methods)
+  const electoralLists = candidates.filter(c => 
+    c.type === 'list' || 
+    (c.type === 'candidate' && c.listName) ||
+    c.listName ||
+    c.presidentName ||
+    c.vicePresidentName
+  ) || [];
+  
+  console.log('🏆 Electoral lists found:', electoralLists.length, electoralLists);
+  console.log('📋 All candidates data:', candidates);
+  
 
   // Show loading state
   if (loading) {
@@ -51,24 +68,15 @@ const VotingInterface = ({ student, onSubmit }) => {
   }
 
   useEffect(() => {
-    // Seleccionar el primer cargo disponible
-    if (cargos.length > 0 && !currentCargo) {
-      setCurrentCargo(cargos[0]);
-    }
-  }, [cargos, currentCargo]);
+    // Check if a list has been selected
+    setIsComplete(!!selectedList);
+  }, [selectedList]);
 
-  useEffect(() => {
-    // Verificar si se han hecho todas las selecciones necesarias
-    const allSelected = cargos.every(cargo => getSelectedCandidate(cargo));
-    setIsComplete(allSelected);
-  }, [selectedVotes, cargos, getSelectedCandidate]);
-
-  const handleCandidateSelect = (candidateId) => {
-    selectCandidate(currentCargo, candidateId);
-  };
-
-  const handleCargoChange = (cargo) => {
-    setCurrentCargo(cargo);
+  const handleListSelect = (listId) => {
+    const selected = electoralLists.find(list => (list._id || list.id) === listId);
+    setSelectedList(selected);
+    // Also update the candidates context for consistency
+    selectCandidate('electoral_list', listId);
   };
 
   const handleSubmit = () => {
@@ -78,21 +86,32 @@ const VotingInterface = ({ student, onSubmit }) => {
   };
 
   const handleClearAll = () => {
-    if (window.confirm('¿Está seguro de que desea limpiar todas las selecciones?')) {
+    if (window.confirm('¿Está seguro de que desea limpiar la selección?')) {
+      setSelectedList(null);
       clearSelections();
     }
   };
 
   const getProgressPercentage = () => {
-    const selectedCount = cargos.filter(cargo => getSelectedCandidate(cargo)).length;
-    return cargos.length > 0 ? Math.round((selectedCount / cargos.length) * 100) : 0;
+    return selectedList ? 100 : 0;
   };
-
-  const currentCandidates = candidates[currentCargo] || [];
-  const selectedCandidate = getSelectedCandidate(currentCargo);
 
   return (
     <div className="voting-interface">
+      {/* Información de la elección */}
+      {isConfigLoaded && (
+        <div className="election-info">
+          <div className="election-type">
+            <span className="election-label">Tipo de Elección:</span>
+            <span className="election-value">{getElectionTypeName()}</span>
+          </div>
+          <div className="election-name">
+            <span className="election-label">Elección:</span>
+            <span className="election-value">{config.electionName}</span>
+          </div>
+        </div>
+      )}
+
       {/* Progreso de votación */}
       <div className="voting-progress">
         <div className="progress-header">
@@ -105,72 +124,52 @@ const VotingInterface = ({ student, onSubmit }) => {
             style={{ width: `${getProgressPercentage()}%` }}
           ></div>
         </div>
-        <div className="cargos-status">
-          {cargos.map(cargo => (
-            <div 
-              key={cargo} 
-              className={`cargo-status ${getSelectedCandidate(cargo) ? 'completed' : 'pending'}`}
-            >
-              {getSelectedCandidate(cargo) ? '✅' : '⏳'} {cargo}
-            </div>
-          ))}
+        <div className="voting-status">
+          <div className={`status-item ${selectedList ? 'completed' : 'pending'}`}>
+            {selectedList ? '✅' : '⏳'} Lista Electoral {selectedList ? 'Seleccionada' : 'Pendiente'}
+          </div>
         </div>
       </div>
 
-      {/* Selector de cargo */}
-      <div className="cargo-selector">
-        <h2>🏆 Seleccione el cargo a votar:</h2>
-        <div className="cargo-tabs">
-          {cargos.map(cargo => (
-            <button
-              key={cargo}
-              onClick={() => handleCargoChange(cargo)}
-              className={`cargo-tab ${currentCargo === cargo ? 'active' : ''} ${getSelectedCandidate(cargo) ? 'completed' : ''}`}
-            >
-              <span className="cargo-icon">
-                {getSelectedCandidate(cargo) ? '✅' : '🗳️'}
-              </span>
-              <span className="cargo-name">{cargo}</span>
-              {getSelectedCandidate(cargo) && (
-                <span className="selected-indicator">
-                  Seleccionado
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+      {/* Información del tipo de elección */}
+      <div className="election-instructions">
+        <h2>🏆 Elección por Listas Electorales</h2>
+        <p className="instruction-text">
+          Seleccione una lista electoral completa. Cada lista incluye candidatos para Presidente y Vicepresidente estudiantil.
+        </p>
       </div>
 
-      {/* Lista de candidatos */}
-      {currentCargo && (
-        <div className="candidates-section">
-          <div className="section-header">
-            <h2>
-              🏆 {currentCargo.toUpperCase()}:
-            </h2>
-            <p className="instruction">
-              Seleccione su candidato preferido para {currentCargo.toLowerCase()}
-            </p>
-          </div>
-
-          <div className="candidates-grid">
-            {currentCandidates.map((candidate, index) => (
-              <CandidateCard
-                key={candidate.id || candidate._id || candidate.originalId || `candidate-${index}`}
-                candidate={candidate}
-                isSelected={selectedCandidate === (candidate.id || candidate._id || candidate.originalId)}
-                onSelect={() => handleCandidateSelect(candidate.id || candidate._id || candidate.originalId)}
-              />
-            ))}
-          </div>
-
-          {currentCandidates.length === 0 && (
-            <div className="no-candidates">
-              <p>ℹ️ No hay candidatos disponibles para este cargo</p>
-            </div>
-          )}
+      {/* Lista de listas electorales */}
+      <div className="lists-section">
+        <div className="section-header">
+          <h2>
+            🗳️ LISTAS ELECTORALES DISPONIBLES:
+          </h2>
+          <p className="instruction">
+            Seleccione la lista electoral de su preferencia
+          </p>
         </div>
-      )}
+
+        <div className="lists-grid">
+          {electoralLists.map((list, index) => (
+            <ElectoralListCard
+              key={list._id || list.id || `list-${index}`}
+              list={list}
+              isSelected={selectedList && (selectedList._id || selectedList.id) === (list._id || list.id)}
+              onSelect={handleListSelect}
+            />
+          ))}
+        </div>
+
+        {electoralLists.length === 0 && (
+          <div className="no-lists">
+            <div className="no-lists-icon">⚠️</div>
+            <h3>No hay listas electorales disponibles</h3>
+            <p>No se han configurado listas electorales para este nivel educativo.</p>
+            <p>Contacte al administrador del sistema.</p>
+          </div>
+        )}
+      </div>
 
       {/* Acciones de votación */}
       <div className="voting-actions">
@@ -186,21 +185,32 @@ const VotingInterface = ({ student, onSubmit }) => {
 
         <div className="actions-center">
           <div className="selection-summary">
-            <h3>📋 Resumen de Selecciones:</h3>
-            {cargos.map(cargo => {
-              const selected = getSelectedCandidate(cargo);
-              return (
-                <div key={cargo} className="selection-item">
-                  <span className="cargo">{cargo}:</span>
-                  <span className={`candidate ${selected ? 'selected' : 'pending'}`}>
-                    {selected ? 
-                      candidates[cargo]?.find(c => c.id === selected)?.nombre || 'Candidato no encontrado'
-                      : 'Sin seleccionar'
-                    }
+            <h3>📋 Selección Actual:</h3>
+            {selectedList ? (
+              <div className="selected-list-summary">
+                <div className="list-summary-header">
+                  <span className="list-name" style={{ color: selectedList.color }}>
+                    ✅ {selectedList.listName}
                   </span>
+                  <span className="list-color-dot" style={{ backgroundColor: selectedList.color }}></span>
                 </div>
-              );
-            })}
+                <div className="candidates-summary">
+                  <div className="candidate-summary">
+                    <span className="role">👑 Presidente:</span>
+                    <span className="name">{selectedList.presidentName}</span>
+                  </div>
+                  <div className="candidate-summary">
+                    <span className="role">🤝 Vicepresidente:</span>
+                    <span className="name">{selectedList.vicePresidentName}</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="no-selection">
+                <span className="pending-icon">⏳</span>
+                <span className="pending-text">Ningúna lista seleccionada</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -210,7 +220,7 @@ const VotingInterface = ({ student, onSubmit }) => {
             className={`action-btn submit-btn ${isComplete ? 'ready' : 'disabled'}`}
             disabled={!isComplete}
           >
-            {isComplete ? '✅ Confirmar Voto' : `⏳ Faltan ${cargos.length - Object.keys(selectedVotes).length} selecciones`}
+            {isComplete ? '✅ Confirmar Voto' : '⏳ Seleccione una lista electoral'}
           </button>
         </div>
       </div>

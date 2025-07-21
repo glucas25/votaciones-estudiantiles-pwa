@@ -63,15 +63,45 @@ const VotingBooth = ({ student, onClose, onVoteComplete }) => {
 
   // Show error state
   if (error) {
+    const isDbError = error.includes('Database') || error.includes('base de datos');
+    const isNoCandidate = error.includes('No hay candidatos');
+    
     return (
       <div className="voting-booth error">
         <div className="error-screen">
-          <div className="error-icon">❌</div>
-          <h2>Error en el sistema de votación</h2>
-          <p>Error: {error}</p>
-          <button onClick={handleReturn} className="return-btn">
-            ⬅️ Volver al Panel
-          </button>
+          <div className="error-icon">{isDbError ? '🔧' : isNoCandidate ? '⚠️' : '❌'}</div>
+          <h2>{isDbError ? 'Problema de Conexión' : isNoCandidate ? 'Sin Candidatos' : 'Error del Sistema'}</h2>
+          <div className="error-details">
+            <p>{error}</p>
+            {isDbError && (
+              <div className="troubleshooting">
+                <p><strong>Soluciones:</strong></p>
+                <ul>
+                  <li>• Recargue la página (F5)</li>
+                  <li>• Verifique su conexión a internet</li>
+                  <li>• Contacte al administrador técnico</li>
+                </ul>
+              </div>
+            )}
+            {isNoCandidate && (
+              <div className="troubleshooting">
+                <p><strong>¿Qué hacer?</strong></p>
+                <ul>
+                  <li>• Contacte al administrador del sistema</li>
+                  <li>• Verifique que los candidatos estén registrados</li>
+                  <li>• Confirme el nivel educativo correcto</li>
+                </ul>
+              </div>
+            )}
+          </div>
+          <div className="error-actions">
+            <button onClick={() => window.location.reload()} className="retry-btn">
+              🔄 Recargar Página
+            </button>
+            <button onClick={handleReturn} className="return-btn">
+              ⬅️ Volver al Panel
+            </button>
+          </div>
         </div>
       </div>
     );

@@ -696,21 +696,104 @@
 }
 
 /* Config Tab */
+/* Config Header with Sub-navigation */
+.config-header {
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 25px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.config-header h2 {
+  margin: 0;
+  padding: 20px 25px 15px 25px;
+  color: #2c3e50;
+  font-size: 1.8rem;
+  font-weight: 600;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.config-subnav {
+  display: flex;
+  background: #f8f9fa;
+}
+
+.config-subnav button {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 15px 20px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #6c757d;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 3px solid transparent;
+}
+
+.config-subnav button:hover {
+  background: #e9ecef;
+  color: #495057;
+}
+
+.config-subnav button.active {
+  background: white;
+  color: #007bff;
+  border-bottom-color: #007bff;
+  font-weight: 600;
+}
+
+.config-content {
+  background: transparent;
+  padding: 0;
+  width: 100%;
+}
+
+.config-content .election-configurator {
+  background: transparent;
+  padding: 20px;
+  max-width: none;
+  width: 100%;
+}
+
+.config-content .election-configurator .configurator-header {
+  display: none; /* Ocultar el header duplicado */
+}
+
+.config-content .election-configurator .configurator-sections {
+  width: 100%;
+  max-width: none;
+}
+
+.config-content .election-configurator .config-section,
+.config-content .election-configurator .config-summary {
+  width: 100%;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+  box-sizing: border-box;
+}
+
+/* Responsive para el ElectionConfigurator dentro del config-content */
+@media (max-width: 768px) {
+  .config-content .election-configurator {
+    padding: 15px;
+  }
+}
+
 .config-tab {
   color: white;
+  width: 100%;
+  max-width: 100%;
 }
 
-.config-tab h2 {
-  margin-bottom: 2rem;
-  font-size: 1.4rem;
-}
-
-.config-sections {
+.config-tab > .config-sections:not(.configurator-sections) {
   display: grid;
   gap: 2rem;
 }
 
-.config-section {
+.config-tab > .config-sections:not(.configurator-sections) > .config-section {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 12px;
@@ -718,7 +801,7 @@
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.config-section h3 {
+.config-tab > .config-sections:not(.configurator-sections) > .config-section h3 {
   margin: 0 0 1rem 0;
   color: #1e293b;
   font-size: 1.2rem;

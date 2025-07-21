@@ -21,6 +21,7 @@ const STORES = {
 export const DOC_TYPES = {
   STUDENT: 'student',
   CANDIDATE: 'candidate',
+  LIST: 'list',  // Nuevo tipo para listas electorales
   VOTE: 'vote',
   SESSION: 'session',
   CONFIG: 'election_config',
