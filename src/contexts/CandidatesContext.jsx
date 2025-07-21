@@ -5,133 +5,7 @@ import databaseService, { DOC_TYPES, EDUCATION_LEVELS } from '../services/databa
 
 const CandidatesContext = createContext();
 
-// Datos mock de candidatos por nivel educativo
-const MOCK_CANDIDATES = {
-  BACHILLERATO: {
-    PRESIDENTE: [
-      {
-        id: 'presidente_bach_001',
-        nombre: 'Ana Sofía Pérez González',
-        cargo: 'PRESIDENTE',
-        lista: 'Lista Azul - Renovación',
-        color: '#2563eb',
-        foto: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzI1NjNlYiIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QU5BPC90ZXh0Pjwvc3ZnPg==',
-        propuestas: [
-          'Mejorar la infraestructura de laboratorios de ciencias',
-          'Implementar programa de becas de excelencia académica',
-          'Crear espacios de estudio 24/7 para bachillerato',
-          'Fortalecer el programa de orientación vocacional'
-        ],
-        experiencia: '3 años como representante estudiantil',
-        slogan: 'Juntos hacia la excelencia académica'
-      },
-      {
-        id: 'presidente_bach_002',
-        nombre: 'Carlos Eduardo Martínez Silva',
-        cargo: 'PRESIDENTE',
-        lista: 'Lista Roja - Progreso',
-        color: '#dc2626',
-        foto: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2RjMjYyNiIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q0FSTE9TPC90ZXh0Pjwvc3ZnPg==',
-        propuestas: [
-          'Modernizar el sistema de comunicación estudiantil',
-          'Impulsar programa de emprendimiento juvenil',
-          'Crear centro de innovación tecnológica',
-          'Establecer intercambios con otras instituciones'
-        ],
-        experiencia: 'Líder del club de robótica',
-        slogan: 'Innovación y tecnología para el futuro'
-      },
-      {
-        id: 'presidente_bach_003',
-        nombre: 'María Fernanda Torres López',
-        cargo: 'PRESIDENTE',
-        lista: 'Lista Verde - Sustentabilidad',
-        color: '#16a34a',
-        foto: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzE2YTM0YSIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TUFSSUEgRjwvdGV4dD48L3N2Zz4=',
-        propuestas: [
-          'Implementar programa de reciclaje institucional',
-          'Crear huertos estudiantiles urbanos',
-          'Promover transporte sustentable a la institución',
-          'Desarrollar conciencia ambiental en la comunidad'
-        ],
-        experiencia: 'Coordinadora del club ecológico',
-        slogan: 'Un futuro verde para nuestra institución'
-      }
-    ],
-    VICEPRESIDENTE: [
-      {
-        id: 'vice_bach_001',
-        nombre: 'Luis Alberto Morales Vega',
-        cargo: 'VICEPRESIDENTE',
-        lista: 'Lista Azul - Renovación',
-        color: '#2563eb',
-        foto: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzI1NjNlYiIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TFVJUzwvdGV4dD48L3N2Zz4=',
-        propuestas: [
-          'Fortalecer programas deportivos y culturales',
-          'Mejorar comunicación entre estudiantes y autoridades',
-          'Crear sistema de tutoría entre estudiantes',
-          'Organizar eventos académicos y sociales'
-        ],
-        experiencia: 'Capitán del equipo de debate',
-        slogan: 'Apoyo constante al liderazgo estudiantil'
-      },
-      {
-        id: 'vice_bach_002',
-        nombre: 'Patricia Alejandra Ruiz Castro',
-        cargo: 'VICEPRESIDENTE',
-        lista: 'Lista Roja - Progreso',
-        color: '#dc2626',
-        foto: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2RjMjYyNiIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+UEFUUklDSUE8L3RleHQ+PC9zdmc+',
-        propuestas: [
-          'Digitalizar procesos estudiantiles',
-          'Crear plataforma de participación ciudadana',
-          'Implementar sistema de sugerencias online',
-          'Modernizar biblioteca y recursos digitales'
-        ],
-        experiencia: 'Desarrolladora de aplicaciones móviles',
-        slogan: 'Tecnología al servicio de los estudiantes'
-      },
-      {
-        id: 'vice_bach_003',
-        nombre: 'Roberto Andrés Silva Herrera',
-        cargo: 'VICEPRESIDENTE',
-        lista: 'Lista Verde - Sustentabilidad',
-        color: '#16a34a',
-        foto: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzE2YTM0YSIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Uk9CRVJUT1A8L3RleHQ+PC9zdmc+',
-        propuestas: [
-          'Promover energías renovables en la institución',
-          'Crear brigadas de limpieza estudiantil',
-          'Implementar jardines verticales',
-          'Educar sobre el cambio climático'
-        ],
-        experiencia: 'Voluntario en organizaciones ambientales',
-        slogan: 'Cuidando nuestro planeta, cuidamos nuestro futuro'
-      }
-    ]
-  },
-  BASICA_SUPERIOR: {
-    PRESIDENTE: [
-      {
-        id: 'presidente_sup_001',
-        nombre: 'Sofía Isabel Ramírez Delgado',
-        cargo: 'PRESIDENTE',
-        lista: 'Lista Amarilla - Diversión',
-        color: '#eab308',
-        foto: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2VhYjMwOCIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+U09GSUE8L3RleHQ+PC9zdmc+',
-        propuestas: [
-          'Más recreos y actividades lúdicas',
-          'Mejorar la cafetería con comida saludable',
-          'Crear festivales de talentos estudiantiles',
-          'Organizar campeonatos deportivos interaulas'
-        ],
-        experiencia: 'Representante de clase por 2 años',
-        slogan: 'Aprender jugando, crecer sonriendo'
-      }
-    ]
-  }
-};
-
-// Datos de votos (se guardará en localStorage)
+// Datos de votos (se guardará en localStorage como respaldo)
 const VOTES_STORAGE_KEY = 'voting_results_2024';
 
 export const CandidatesProvider = ({ children }) => {
@@ -151,79 +25,75 @@ export const CandidatesProvider = ({ children }) => {
           setIsDbReady(true);
           console.log('Database is ready');
         } else {
-          // Retry after a short delay, but don't wait forever
+          // Retry after a short delay
           setTimeout(checkDbReady, 100);
         }
       } catch (error) {
-        console.error('Database check failed, proceeding without DB:', error);
+        console.error('Database check failed:', error);
+        setError('Database connection failed');
         setIsDbReady(false);
       }
     };
     
-    // Set a timeout to force loading without DB if it takes too long
+    // Set a timeout to handle database initialization issues
     const forceTimeout = setTimeout(() => {
       if (!isDbReady) {
-        console.log('Database taking too long, proceeding without it');
+        console.warn('Database taking too long to initialize');
+        setError('Database initialization timeout');
         setIsDbReady(false);
       }
-    }, 2000);
+    }, 5000);
     
     checkDbReady();
     
     return () => clearTimeout(forceTimeout);
   }, []);
 
+  // Load candidates and votes when user and database are ready
   useEffect(() => {
     console.log('CandidatesContext useEffect:', { user, isDbReady });
-    if (user && user.level) {
-      console.log('Initializing candidates for level:', user.level);
-      if (isDbReady) {
-        console.log('Using database');
-        initializeCandidatesData(user.level);
-        loadVotes();
-      } else {
-        console.log('Database not ready, using mock data directly');
-        loadCandidatesForLevel(user.level);
-      }
+    if (user && user.level && isDbReady) {
+      console.log('Loading candidates and votes for level:', user.level);
+      loadCandidatesForLevel(user.level);
+      loadVotes();
     } else if (user && !user.level) {
-      console.log('User level not defined:', user);
+      console.warn('User level not defined:', user);
+      setError('User education level not specified');
+    } else if (user && !isDbReady) {
+      console.log('Waiting for database to be ready...');
     }
   }, [user, isDbReady]);
 
   /**
-   * Initialize candidates data - try PouchDB first, fallback to mock data
+   * Load candidates from database for a specific education level
    */
-  const initializeCandidatesData = async (level) => {
-    console.log('initializeCandidatesData called with level:', level);
+  const loadCandidatesForLevel = async (level) => {
+    console.log('Loading candidates for level:', level);
     setLoading(true);
     setError(null);
 
     try {
-      // First try to load from PouchDB
       const candidatesFromDB = await loadCandidatesFromDB(level);
-      console.log('Candidates from DB:', candidatesFromDB);
       
       if (candidatesFromDB && Object.keys(candidatesFromDB).length > 0) {
         setCandidates(candidatesFromDB);
-        console.log('Set candidates from DB:', candidatesFromDB);
+        console.log('Successfully loaded candidates from database:', candidatesFromDB);
       } else {
-        // If no candidates in DB, initialize with mock data
-        console.log('No candidates in DB, initializing with mock data');
-        await initializeMockCandidates(level);
+        // No candidates found - set empty state
+        setCandidates({});
+        console.log('No candidates found in database for level:', level);
       }
     } catch (err) {
-      console.error('Failed to initialize candidates:', err);
-      setError(err.message);
-      // Fallback to mock data
-      console.log('Falling back to mock data due to error');
-      loadCandidatesForLevel(level);
+      console.error('Failed to load candidates:', err);
+      setError(`Failed to load candidates: ${err.message}`);
+      setCandidates({});
     } finally {
       setLoading(false);
     }
   };
 
   /**
-   * Load candidates from PouchDB
+   * Load candidates from database
    */
   const loadCandidatesFromDB = async (level) => {
     try {
@@ -236,7 +106,7 @@ export const CandidatesProvider = ({ children }) => {
       });
 
       if (result.docs && result.docs.length > 0) {
-        // Group candidates by cargo
+        // Group candidates by cargo (position)
         const candidatesByPosition = {};
         result.docs.forEach(candidate => {
           if (!candidatesByPosition[candidate.cargo]) {
@@ -250,84 +120,17 @@ export const CandidatesProvider = ({ children }) => {
       
       return {};
     } catch (err) {
-      console.error('Failed to load candidates from DB:', err);
-      return {};
+      console.error('Failed to load candidates from database:', err);
+      throw new Error(`Database query failed: ${err.message}`);
     }
   };
 
   /**
-   * Initialize mock candidates in PouchDB if database is empty
-   */
-  const initializeMockCandidates = async (level) => {
-    const mockCandidates = MOCK_CANDIDATES[level] || {};
-    
-    if (Object.keys(mockCandidates).length === 0) {
-      setCandidates({});
-      return;
-    }
-
-    try {
-      console.log(`Initializing mock candidates for ${level}`);
-      
-      // Convert mock data to PouchDB format
-      const candidatesForDB = [];
-      
-      Object.entries(mockCandidates).forEach(([cargo, candidatesList]) => {
-        candidatesList.forEach(candidate => {
-          candidatesForDB.push({
-            nombre: candidate.nombre,
-            apellidos: '', // Mock data doesn't have apellidos
-            cargo: cargo,
-            level: level,
-            ticketId: candidate.lista,
-            foto: candidate.foto,
-            propuestas: Array.isArray(candidate.propuestas) ? candidate.propuestas.join(', ') : candidate.propuestas,
-            experiencia: candidate.experiencia,
-            slogan: candidate.slogan,
-            color: candidate.color,
-            votos: 0,
-            // Migration metadata
-            migratedFrom: 'mockData',
-            originalId: candidate.id
-          });
-        });
-      });
-
-      if (candidatesForDB.length > 0) {
-        const result = await databaseService.bulkCreate('candidates', candidatesForDB, DOC_TYPES.CANDIDATE);
-        
-        if (result.success) {
-          // Reload candidates from DB
-          const reloadedCandidates = await loadCandidatesFromDB(level);
-          setCandidates(reloadedCandidates);
-        } else {
-          // Fallback to mock data
-          setCandidates(mockCandidates);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to initialize mock candidates:', err);
-      // Fallback to mock data
-      setCandidates(mockCandidates);
-    }
-  };
-
-  /**
-   * Fallback to original localStorage method
-   */
-  const loadCandidatesForLevel = (level) => {
-    console.log('loadCandidatesForLevel called with level:', level);
-    const levelCandidates = MOCK_CANDIDATES[level] || {};
-    console.log('Mock candidates for level:', level, levelCandidates);
-    setCandidates(levelCandidates);
-  };
-
-  /**
-   * Load votes from PouchDB and localStorage
+   * Load votes from database and localStorage (fallback)
    */
   const loadVotes = async () => {
     try {
-      // Try to load from PouchDB first
+      // Try to load from database first
       const result = await databaseService.findDocuments('votes', {
         selector: {
           type: DOC_TYPES.VOTE,
@@ -337,7 +140,7 @@ export const CandidatesProvider = ({ children }) => {
       });
 
       if (result.docs && result.docs.length > 0) {
-        // Convert PouchDB votes to the expected format
+        // Convert database votes to the expected format
         const votesByStudent = {};
         result.docs.forEach(vote => {
           if (!votesByStudent[vote.studentId]) {
@@ -346,19 +149,20 @@ export const CandidatesProvider = ({ children }) => {
           
           // Find candidate info to get cargo
           const candidateId = vote.candidateId;
-          let cargo = 'UNKNOWN';
+          let cargo = vote.cargo || 'UNKNOWN';
           
-          // Try to determine cargo from candidate data
-          Object.entries(candidates).forEach(([cargoName, candidatesList]) => {
-            const found = candidatesList.find(c => 
-              (c._id && c._id === candidateId) || 
-              (c.id && c.id === candidateId) ||
-              (c.originalId && c.originalId === candidateId)
-            );
-            if (found) {
-              cargo = cargoName;
-            }
-          });
+          // Try to determine cargo from candidate data if not stored
+          if (cargo === 'UNKNOWN') {
+            Object.entries(candidates).forEach(([cargoName, candidatesList]) => {
+              const found = candidatesList.find(c => 
+                (c._id && c._id === candidateId) || 
+                (c.id && c.id === candidateId)
+              );
+              if (found) {
+                cargo = cargoName;
+              }
+            });
+          }
 
           votesByStudent[vote.studentId][cargo] = {
             id: vote._id,
@@ -372,38 +176,51 @@ export const CandidatesProvider = ({ children }) => {
         });
         
         setVotes(votesByStudent);
+        console.log('Successfully loaded votes from database');
       } else {
-        // Fallback to localStorage
+        // Fallback to localStorage if no votes in database
         loadVotesFromLocalStorage();
       }
     } catch (err) {
-      console.error('Failed to load votes from PouchDB:', err);
+      console.error('Failed to load votes from database:', err);
       // Fallback to localStorage
       loadVotesFromLocalStorage();
     }
   };
 
   /**
-   * Load votes from localStorage (fallback)
+   * Load votes from localStorage (fallback method)
    */
   const loadVotesFromLocalStorage = () => {
-    const savedVotes = localStorage.getItem(VOTES_STORAGE_KEY);
-    if (savedVotes) {
-      setVotes(JSON.parse(savedVotes));
+    try {
+      const savedVotes = localStorage.getItem(VOTES_STORAGE_KEY);
+      if (savedVotes) {
+        setVotes(JSON.parse(savedVotes));
+        console.log('Loaded votes from localStorage');
+      } else {
+        setVotes({});
+      }
+    } catch (err) {
+      console.error('Failed to load votes from localStorage:', err);
+      setVotes({});
     }
   };
 
   /**
-   * Save votes to both PouchDB and localStorage
+   * Save votes to both database and localStorage
    */
   const saveVotes = async (newVotes) => {
     // Always save to localStorage as backup
-    localStorage.setItem(VOTES_STORAGE_KEY, JSON.stringify(newVotes));
+    try {
+      localStorage.setItem(VOTES_STORAGE_KEY, JSON.stringify(newVotes));
+    } catch (err) {
+      console.error('Failed to save votes to localStorage:', err);
+    }
     
-    // Try to save to PouchDB if available
+    // Try to save to database if available
     if (isDbReady) {
       try {
-        // Convert votes to PouchDB format and save
+        // Convert votes to database format and save
         const votesToSave = [];
         
         Object.entries(newVotes).forEach(([studentId, studentVotes]) => {
@@ -419,18 +236,27 @@ export const CandidatesProvider = ({ children }) => {
           });
         });
 
-        // Save votes to PouchDB (replace existing)
+        // Save votes to database (replace existing)
         for (const vote of votesToSave) {
           await databaseService.createDocument('votes', vote, DOC_TYPES.VOTE);
         }
+        
+        console.log('Successfully saved votes to database');
       } catch (err) {
-        console.error('Failed to save votes to PouchDB:', err);
+        console.error('Failed to save votes to database:', err);
         // Continue with localStorage only
       }
     }
   };
 
+  /**
+   * Cast a vote for a student
+   */
   const castVote = async (studentId, candidateId, cargo) => {
+    if (!user || !user.course || !user.level) {
+      throw new Error('User information incomplete');
+    }
+
     const voteRecord = {
       id: `vote_${Date.now()}_${studentId}`,
       studentId,
@@ -456,6 +282,9 @@ export const CandidatesProvider = ({ children }) => {
     return voteRecord;
   };
 
+  /**
+   * Check if a student has voted
+   */
   const hasVoted = (studentId, cargo = null) => {
     if (!votes[studentId]) return false;
     
@@ -463,14 +292,20 @@ export const CandidatesProvider = ({ children }) => {
       return !!votes[studentId][cargo];
     }
     
-    // Verificar si ha votado por algún cargo
+    // Check if has voted for any position
     return Object.keys(votes[studentId] || {}).length > 0;
   };
 
+  /**
+   * Get vote for a specific student and position
+   */
   const getVoteForStudent = (studentId, cargo) => {
     return votes[studentId]?.[cargo] || null;
   };
 
+  /**
+   * Select a candidate (for UI state)
+   */
   const selectCandidate = (cargo, candidateId) => {
     setSelectedVotes(prev => ({
       ...prev,
@@ -478,35 +313,47 @@ export const CandidatesProvider = ({ children }) => {
     }));
   };
 
+  /**
+   * Clear all selections (for UI state)
+   */
   const clearSelections = () => {
     setSelectedVotes({});
   };
 
+  /**
+   * Get selected candidate for a position (UI state)
+   */
   const getSelectedCandidate = (cargo) => {
     return selectedVotes[cargo] || null;
   };
 
+  /**
+   * Find candidate by ID
+   */
   const getCandidateById = (candidateId) => {
     for (const cargo in candidates) {
       const candidatesList = candidates[cargo];
       const found = candidatesList.find(c => 
         c.id === candidateId || 
-        c._id === candidateId || 
-        c.originalId === candidateId
+        c._id === candidateId
       );
       if (found) return found;
     }
     return null;
   };
 
+  /**
+   * Get voting results with statistics
+   */
   const getVotingResults = () => {
     const results = {};
     
-    // Inicializar contadores
+    // Initialize counters
     for (const cargo in candidates) {
       results[cargo] = {};
       candidates[cargo].forEach(candidate => {
-        results[cargo][candidate.id] = {
+        const candidateId = candidate.id || candidate._id;
+        results[cargo][candidateId] = {
           candidate,
           votes: 0,
           percentage: 0
@@ -514,7 +361,7 @@ export const CandidatesProvider = ({ children }) => {
       });
     }
 
-    // Contar votos
+    // Count votes
     for (const studentId in votes) {
       for (const cargo in votes[studentId]) {
         const vote = votes[studentId][cargo];
@@ -524,7 +371,7 @@ export const CandidatesProvider = ({ children }) => {
       }
     }
 
-    // Calcular porcentajes
+    // Calculate percentages
     for (const cargo in results) {
       const totalVotes = Object.values(results[cargo]).reduce((sum, candidate) => sum + candidate.votes, 0);
       
@@ -539,15 +386,26 @@ export const CandidatesProvider = ({ children }) => {
     return results;
   };
 
+  /**
+   * Get available positions (cargos)
+   */
   const getAvailableCargos = () => {
     return Object.keys(candidates);
   };
 
+  /**
+   * Reset all votes
+   */
   const resetAllVotes = async () => {
     setVotes({});
-    localStorage.removeItem(VOTES_STORAGE_KEY);
     
-    // Also clear votes from PouchDB if available
+    try {
+      localStorage.removeItem(VOTES_STORAGE_KEY);
+    } catch (err) {
+      console.error('Failed to clear votes from localStorage:', err);
+    }
+    
+    // Also clear votes from database if available
     if (isDbReady) {
       try {
         const result = await databaseService.findDocuments('votes', {
@@ -563,33 +421,78 @@ export const CandidatesProvider = ({ children }) => {
             await databaseService.deleteDocument('votes', vote._id, vote._rev);
           }
         }
+        
+        console.log('Successfully cleared all votes from database');
       } catch (err) {
-        console.error('Failed to clear votes from PouchDB:', err);
+        console.error('Failed to clear votes from database:', err);
       }
     }
   };
 
+  /**
+   * Refresh candidates data from database
+   */
+  const refreshCandidates = async () => {
+    if (user && user.level && isDbReady) {
+      await loadCandidatesForLevel(user.level);
+    }
+  };
+
+  /**
+   * Get total number of candidates
+   */
+  const getTotalCandidates = () => {
+    return Object.values(candidates).reduce((total, candidatesList) => total + candidatesList.length, 0);
+  };
+
+  /**
+   * Get total number of votes cast
+   */
+  const getTotalVotes = () => {
+    return Object.values(votes).reduce((total, studentVotes) => total + Object.keys(studentVotes).length, 0);
+  };
+
+  /**
+   * Check if there are any candidates loaded
+   */
+  const hasCandidates = () => {
+    return Object.keys(candidates).length > 0;
+  };
+
   const value = {
+    // State
     candidates,
     votes,
     selectedVotes,
     loading,
     error,
     isDbReady,
+    
+    // Voting operations
     castVote,
     hasVoted,
     getVoteForStudent,
+    resetAllVotes,
+    
+    // UI state operations
     selectCandidate,
     clearSelections,
     getSelectedCandidate,
+    
+    // Data retrieval
     getCandidateById,
     getVotingResults,
     getAvailableCargos,
-    resetAllVotes,
+    
     // Database operations
-    initializeCandidatesData,
+    loadCandidatesForLevel,
     loadCandidatesFromDB,
-    initializeMockCandidates
+    refreshCandidates,
+    
+    // Statistics
+    getTotalCandidates,
+    getTotalVotes,
+    hasCandidates
   };
 
   return (

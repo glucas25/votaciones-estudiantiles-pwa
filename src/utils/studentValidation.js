@@ -1,8 +1,11 @@
 // src/utils/studentValidation.js
 // Advanced student data validation with Ecuador ID validation
 
+import educationLevelsService from '../services/educationLevels.js';
+
 // Education levels mapping
 export const EDUCATION_LEVELS = {
+  'PREPARATORIA': 'PREPARATORIA',
   'BASICA_ELEMENTAL': 'BASICA_ELEMENTAL',
   'BASICA_MEDIA': 'BASICA_MEDIA', 
   'BASICA_SUPERIOR': 'BASICA_SUPERIOR',
@@ -39,7 +42,8 @@ export const validateID = (cedula) => {
 };
 
 /**
- * Normalizes and validates student names
+ * Enhanced name validation with comprehensive Spanish character support
+ * Supports all Latin characters, tildes, diaeresis, and special Spanish characters
  */
 export const validateAndNormalizeName = (name, fieldName = 'Nombre') => {
   if (!name || typeof name !== 'string') {
@@ -51,26 +55,99 @@ export const validateAndNormalizeName = (name, fieldName = 'Nombre') => {
     return { valid: false, error: `${fieldName} debe tener al menos 2 caracteres` };
   }
 
-  if (trimmed.length > 50) {
-    return { valid: false, error: `${fieldName} no puede exceder 50 caracteres` };
+  if (trimmed.length > 60) {
+    return { valid: false, error: `${fieldName} no puede exceder 60 caracteres` };
   }
 
-  // Only allow letters, spaces, apostrophes, and hyphens
-  const namePattern = /^[a-záéíóúñü\s'\-]+$/i;
+  // Comprehensive Spanish character pattern
+  // Includes: basic letters, all accented vowels, ñ, ü, spaces, apostrophes, hyphens, dots
+  const namePattern = /^[a-zÀ-ÿ\s'\-\.]+$/i;
+  
+  // Check for invalid characters
   if (!namePattern.test(trimmed)) {
-    return { valid: false, error: `${fieldName} contiene caracteres inválidos` };
+    // Get the invalid characters for better error messages
+    const invalidChars = getInvalidCharacters(trimmed);
+    return { 
+      valid: false, 
+      error: `${fieldName} contiene caracteres inválidos: ${invalidChars.join(', ')}. Solo se permiten letras, tildes, espacios, apóstrofes, guiones y puntos.` 
+    };
   }
 
+  // Check for suspicious patterns
+  if (hasInvalidPatterns(trimmed)) {
+    return {
+      valid: false,
+      error: `${fieldName} contiene patrones no válidos (números consecutivos, símbolos especiales, etc.)`
+    };
+  }
+
+  // Clean and normalize the name
+  const cleaned = cleanNameString(trimmed);
+  
   // Normalize: title case and remove extra spaces
-  const normalized = trimmed
+  const normalized = cleaned
     .toLowerCase()
     .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
-    .replace(/\s+/g, ' ');
+    .map(word => {
+      if (word.length === 0) return '';
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .filter(word => word.length > 0)
+    .join(' ');
 
-  return { valid: true, normalized };
+  return { valid: true, normalized, original: name, cleaned };
 };
+
+/**
+ * Extract invalid characters from a string for detailed error reporting
+ */
+function getInvalidCharacters(str) {
+  const validPattern = /[a-zÀ-ÿ\s'\-\.]/i;
+  const invalidChars = new Set();
+  
+  for (let char of str) {
+    if (!validPattern.test(char)) {
+      invalidChars.add(char);
+    }
+  }
+  
+  return Array.from(invalidChars);
+}
+
+/**
+ * Check for patterns that suggest invalid names
+ */
+function hasInvalidPatterns(str) {
+  // Pattern checks for obviously invalid names
+  const invalidPatterns = [
+    /\d{2,}/, // Multiple consecutive numbers
+    /[!@#$%^&*()_+=\[\]{};:"<>?|\\]/, // Special symbols
+    /\s{3,}/, // Multiple consecutive spaces (after trim should not happen)
+    /^[\s'\-\.]+$/, // Only punctuation
+    /^.{1}$/, // Single character (handled by length check but double-check)
+    /([a-z])\1{4,}/i // Same letter repeated 5+ times
+  ];
+  
+  return invalidPatterns.some(pattern => pattern.test(str));
+}
+
+/**
+ * Clean common encoding issues and invisible characters
+ */
+function cleanNameString(str) {
+  return str
+    // Remove invisible/zero-width characters
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    // Normalize smart quotes to regular apostrophes
+    .replace(/[‘’]/g, "'")
+    // Normalize different dash types to regular hyphen
+    .replace(/[–—]/g, '-')
+    // Remove any remaining control characters
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
+    // Normalize multiple spaces
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 /**
  * Validates course format (flexible - accepts any format)
@@ -93,22 +170,41 @@ export const validateCourse = (course, level) => {
 };
 
 /**
- * Validates education level
+ * Validates education level using configurable service
  */
 export const validateEducationLevel = (level) => {
   if (!level || typeof level !== 'string') {
     return { valid: false, error: 'Nivel educativo es requerido' };
   }
 
-  const normalized = EDUCATION_LEVELS[level.toUpperCase()];
-  if (!normalized) {
+  const trimmed = level.trim().toUpperCase();
+  
+  // First check static levels for backward compatibility
+  if (EDUCATION_LEVELS[trimmed]) {
     return { 
-      valid: false, 
-      error: `Nivel educativo inválido. Valores permitidos: ${Object.keys(EDUCATION_LEVELS).join(', ')}` 
+      valid: true, 
+      normalized: EDUCATION_LEVELS[trimmed],
+      displayName: educationLevelsService.getDisplayName(trimmed)
     };
   }
-
-  return { valid: true, normalized };
+  
+  // Then check configurable service
+  if (educationLevelsService.isValidEducationLevel(trimmed)) {
+    return { 
+      valid: true, 
+      normalized: trimmed,
+      displayName: educationLevelsService.getDisplayName(trimmed)
+    };
+  }
+  
+  // Generate helpful error message
+  const availableLevels = educationLevelsService.getEducationLevelsForForm();
+  const levelNames = availableLevels.map(l => `${l.label} (${l.value})`).join(', ');
+  
+  return { 
+    valid: false, 
+    error: `Nivel educativo inválido. Debe ser uno de: ${levelNames}` 
+  };
 };
 
 /**

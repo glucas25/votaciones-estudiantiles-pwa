@@ -3,192 +3,28 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import StudentManager from './StudentManager';
 import DataTransitionPanel from './DataTransitionPanel';
 import DatabaseInspector from './DatabaseInspector';
+import EducationLevelsManager from './EducationLevelsManager';
 import { useDatabase, useStudents, useCandidates } from '../../hooks/useDatabase.js';
+import databaseService, { DOC_TYPES } from '../../services/database-indexeddb.js';
 import './AdminDashboard.css';
 
 // Contexto para datos de administración
 const AdminContext = createContext();
 
-// Mock data para candidatos y votos
-const mockCandidates = [
-  {
-    id: 'pres_001',
-    nombre: 'Ana Pérez González',
-    cargo: 'PRESIDENTE',
-    lista: 'Lista Azul',
-    color: '#2563eb',
-    foto: 'https://images.unsplash.com/photo-1494790108755-2616b612b193?w=150&h=150&fit=crop&crop=face',
-    propuestas: ['Más deportes y mejor cafetería', 'Tecnología en aulas'],
-    nivel: 'BACHILLERATO',
-    votos: 245
-  },
-  {
-    id: 'pres_002',
-    nombre: 'Carlos Ruiz Morales',
-    cargo: 'PRESIDENTE',
-    lista: 'Lista Roja',
-    color: '#dc2626',
-    foto: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-    propuestas: ['Tecnología y medio ambiente', 'Actividades culturales'],
-    nivel: 'BACHILLERATO',
-    votos: 198
-  },
-  {
-    id: 'pres_003',
-    nombre: 'Sofía Torres Vargas',
-    cargo: 'PRESIDENTE',
-    lista: 'Lista Verde',
-    color: '#16a34a',
-    foto: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
-    propuestas: ['Arte y cultura estudiantil', 'Espacios recreativos'],
-    nivel: 'BACHILLERATO',
-    votos: 100
-  },
-  {
-    id: 'vice_001',
-    nombre: 'Luis Morales Díaz',
-    cargo: 'VICEPRESIDENTE',
-    lista: 'Lista Azul',
-    color: '#2563eb',
-    foto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-    propuestas: ['Apoyo académico', 'Eventos deportivos'],
-    nivel: 'BACHILLERATO',
-    votos: 267
-  },
-  {
-    id: 'vice_002',
-    nombre: 'Patricia Vega Silva',
-    cargo: 'VICEPRESIDENTE',
-    lista: 'Lista Roja',
-    color: '#dc2626',
-    foto: 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=150&h=150&fit=crop&crop=face',
-    propuestas: ['Medio ambiente', 'Proyectos sociales'],
-    nivel: 'BACHILLERATO',
-    votos: 156
-  },
-  {
-    id: 'vice_003',
-    nombre: 'Roberto Silva Luna',
-    cargo: 'VICEPRESIDENTE',
-    lista: 'Lista Verde',
-    color: '#16a34a',
-    foto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face',
-    propuestas: ['Tecnología educativa', 'Bienestar estudiantil'],
-    nivel: 'BACHILLERATO',
-    votos: 120
-  }
-];
 
-// Mock data para estadísticas
-const mockStats = {
-  totalStudents: 700,
-  studentsVoted: 543,
-  studentsAbsent: 157,
-  activeCourses: 24,
-  totalCourses: 28,
-  syncedDevices: 22,
-  totalDevices: 24,
-  currentTime: '14:30'
+// Default stats structure
+const defaultStats = {
+  totalStudents: 0,
+  studentsVoted: 0,
+  studentsAbsent: 0,
+  activeCourses: 0,
+  totalCourses: 0,
+  syncedDevices: 0,
+  totalDevices: 0,
+  currentTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
 };
 
-const participationByLevel = [
-  { level: 'Básica Elemental', voted: 85, total: 100, percentage: 85 },
-  { level: 'Básica Media', voted: 142, total: 180, percentage: 78.9 },
-  { level: 'Básica Superior', voted: 156, total: 200, percentage: 78 },
-  { level: 'Bachillerato', voted: 160, total: 220, percentage: 72.7 }
-];
 
-// Mock data para estudiantes
-const mockStudents = [
-  {
-    id: 'student_001',
-    cedula: '1234567890',
-    nombres: 'Ana María',
-    apellidos: 'González Pérez',
-    curso: '1ro Bach A',
-    nivel: 'BACHILLERATO',
-    año: 2024,
-    status: 'pending',
-    created: '2024-03-01T08:00:00Z'
-  },
-  {
-    id: 'student_002', 
-    cedula: '1234567891',
-    nombres: 'Carlos Eduardo',
-    apellidos: 'Martínez Silva',
-    curso: '1ro Bach A',
-    nivel: 'BACHILLERATO',
-    año: 2024,
-    status: 'voted',
-    created: '2024-03-01T08:00:00Z'
-  },
-  {
-    id: 'student_003',
-    cedula: '1234567892',
-    nombres: 'María José',
-    apellidos: 'López Torres',
-    curso: '8vo A',
-    nivel: 'BASICA_SUPERIOR',
-    año: 2024,
-    status: 'pending',
-    created: '2024-03-01T08:00:00Z'
-  },
-  {
-    id: 'student_004',
-    cedula: '1234567893',
-    nombres: 'Diego Fernando',
-    apellidos: 'Rodríguez Vega',
-    curso: '2do Bach A',
-    nivel: 'BACHILLERATO',
-    año: 2024,
-    status: 'pending',
-    created: '2024-03-01T08:00:00Z'
-  },
-  {
-    id: 'student_005',
-    cedula: '1234567894',
-    nombres: 'Isabella Sofia',
-    apellidos: 'Castro Morales',
-    curso: '1ro Bach B',
-    nivel: 'BACHILLERATO',
-    año: 2024,
-    status: 'voted',
-    created: '2024-03-01T08:00:00Z'
-  },
-  {
-    id: 'student_006',
-    cedula: '1234567895',
-    nombres: 'Sebastián David',
-    apellidos: 'Herrera Luna',
-    curso: '3ro Bach A',
-    nivel: 'BACHILLERATO',
-    año: 2024,
-    status: 'absent',
-    created: '2024-03-01T08:00:00Z'
-  },
-  {
-    id: 'student_007',
-    cedula: '1234567896',
-    nombres: 'Valentina Andrea',
-    apellidos: 'Vargas Ruiz',
-    curso: '9no A',
-    nivel: 'BASICA_SUPERIOR',
-    año: 2024,
-    status: 'pending',
-    created: '2024-03-01T08:00:00Z'
-  },
-  {
-    id: 'student_008',
-    cedula: '1234567897',
-    nombres: 'Mateo Alejandro',
-    apellidos: 'Jiménez Castro',
-    curso: '10mo B',
-    nivel: 'BASICA_SUPERIOR',
-    año: 2024,
-    status: 'voted',
-    created: '2024-03-01T08:00:00Z'
-  }
-];
 
 // Componente principal del Dashboard
 function AdminDashboard() {
@@ -215,7 +51,8 @@ function AdminDashboard() {
   // Local state - starts empty, filled from database
   const [candidates, setCandidates] = useState([]);
   const [students, setStudents] = useState([]);
-  const [stats, setStats] = useState(mockStats);
+  const [stats, setStats] = useState(defaultStats);
+  const [participationByLevel, setParticipationByLevel] = useState([]);
 
   // Sync with database data
   useEffect(() => {
@@ -243,6 +80,67 @@ function AdminDashboard() {
       }
     }
   }, [isReady, candidatesLoading, dbCandidates]);
+
+  // Function to calculate real statistics from database data
+  const calculateStats = (studentsData, candidatesData) => {
+    const totalStudents = studentsData.length;
+    const studentsVoted = studentsData.filter(s => s.status === 'voted').length;
+    const studentsAbsent = studentsData.filter(s => s.status === 'absent').length;
+    
+    // Get unique courses from students
+    const courses = [...new Set(studentsData.map(s => s.curso).filter(Boolean))];
+    const activeCourses = courses.length;
+    
+    return {
+      totalStudents,
+      studentsVoted,
+      studentsAbsent,
+      activeCourses,
+      totalCourses: activeCourses, // For now, assume all courses are active
+      syncedDevices: 1, // Local database is always synced
+      totalDevices: 1,
+      currentTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+    };
+  };
+
+  // Function to calculate participation by level
+  const calculateParticipationByLevel = (studentsData) => {
+    const levelMap = {
+      'BASICA_ELEMENTAL': 'Básica Elemental',
+      'BASICA_MEDIA': 'Básica Media', 
+      'BASICA_SUPERIOR': 'Básica Superior',
+      'BACHILLERATO': 'Bachillerato'
+    };
+
+    const levels = Object.keys(levelMap);
+    return levels.map(levelKey => {
+      const levelStudents = studentsData.filter(s => s.nivel === levelKey);
+      const total = levelStudents.length;
+      const voted = levelStudents.filter(s => s.status === 'voted').length;
+      const percentage = total > 0 ? ((voted / total) * 100) : 0;
+      
+      return {
+        level: levelMap[levelKey],
+        voted,
+        total,
+        percentage: Math.round(percentage * 10) / 10 // Round to 1 decimal place
+      };
+    }).filter(level => level.total > 0); // Only include levels with students
+  };
+
+  // Update stats when students or candidates data changes
+  useEffect(() => {
+    if (students.length >= 0) { // Allow calculation even with empty array
+      const newStats = calculateStats(students, candidates);
+      setStats(newStats);
+      
+      const newParticipation = calculateParticipationByLevel(students);
+      setParticipationByLevel(newParticipation);
+      
+      console.log('📊 Stats updated:', newStats);
+      console.log('📈 Participation by level updated:', newParticipation);
+    }
+  }, [students, candidates]);
 
   // Student management functions
   const handleStudentAdd = async (newStudent) => {
@@ -360,15 +258,144 @@ function AdminDashboard() {
     }
   };
 
+  // Function to add test data for debugging
+  const addTestData = async () => {
+    console.log('🧪 Adding test data...');
+    
+    const testStudents = [
+      {
+        _id: 'student_001',
+        type: DOC_TYPES.STUDENT,
+        cedula: '1234567001',
+        nombres: 'Juan Carlos',
+        apellidos: 'Pérez García',
+        course: '1ro Bach A',
+        curso: '1ro Bach A',
+        level: 'BACHILLERATO',
+        nivel: 'BACHILLERATO',
+        numero: 1,
+        createdAt: new Date().toISOString()
+      },
+      {
+        _id: 'student_002', 
+        type: DOC_TYPES.STUDENT,
+        cedula: '1234567002',
+        nombres: 'María José',
+        apellidos: 'González López',
+        course: '1ro Bach A',
+        curso: '1ro Bach A',
+        level: 'BACHILLERATO',
+        nivel: 'BACHILLERATO',
+        numero: 2,
+        createdAt: new Date().toISOString()
+      },
+      {
+        _id: 'student_003',
+        type: DOC_TYPES.STUDENT,
+        cedula: '1234567003',
+        nombres: 'Pedro Andrés',
+        apellidos: 'Martínez Silva',
+        course: '1ro Bach A',
+        curso: '1ro Bach A',
+        level: 'BACHILLERATO',
+        nivel: 'BACHILLERATO',
+        numero: 3,
+        createdAt: new Date().toISOString()
+      },
+      {
+        _id: 'student_004',
+        type: DOC_TYPES.STUDENT,
+        cedula: '1234567004',
+        nombres: 'Ana Lucía',
+        apellidos: 'Rodríguez Torres',
+        course: '1ro Bach B',
+        curso: '1ro Bach B',
+        level: 'BACHILLERATO',
+        nivel: 'BACHILLERATO',
+        numero: 1,
+        createdAt: new Date().toISOString()
+      },
+      {
+        _id: 'student_005',
+        type: DOC_TYPES.STUDENT,
+        cedula: '1234567005',
+        nombres: 'Carlos Eduardo',
+        apellidos: 'Vásquez Morales',
+        course: '1ro Bach B',
+        curso: '1ro Bach B',
+        level: 'BACHILLERATO',
+        nivel: 'BACHILLERATO',
+        numero: 2,
+        createdAt: new Date().toISOString()
+      },
+      {
+        _id: 'student_006',
+        type: DOC_TYPES.STUDENT,
+        cedula: '1234567006',
+        nombres: 'Sofía Valentina',
+        apellidos: 'Herrera Castro',
+        course: '8vo A',
+        curso: '8vo A',
+        level: 'BASICA_SUPERIOR',
+        nivel: 'BASICA_SUPERIOR',
+        numero: 1,
+        createdAt: new Date().toISOString()
+      },
+      {
+        _id: 'student_007',
+        type: DOC_TYPES.STUDENT,
+        cedula: '1234567007',
+        nombres: 'Diego Alejandro',
+        apellidos: 'Jiménez Ruiz',
+        course: '8vo A',
+        curso: '8vo A',
+        level: 'BASICA_SUPERIOR',
+        nivel: 'BASICA_SUPERIOR',
+        numero: 2,
+        createdAt: new Date().toISOString()
+      }
+    ];
+
+    if (isReady) {
+      try {
+        for (const student of testStudents) {
+          try {
+            const result = await databaseService.createDocument('students', student, DOC_TYPES.STUDENT);
+            if (result.success) {
+              console.log(`✅ Added test student: ${student.nombres} ${student.apellidos}`);
+            }
+          } catch (error) {
+            if (error.message && error.message.includes('already exists')) {
+              console.log(`⚠️ Test student already exists: ${student.nombres} ${student.apellidos}`);
+            } else {
+              console.error(`❌ Error adding test student ${student.nombres}:`, error);
+            }
+          }
+        }
+        console.log('🎉 Finished adding test data');
+        
+        // Force refresh of students data
+        window.location.reload();
+        
+      } catch (error) {
+        console.error('❌ Error adding test data:', error);
+      }
+    } else {
+      console.log('⚠️ Database not ready');
+    }
+  };
+
   return (
     <AdminContext.Provider value={{ 
       candidates, setCandidates, 
       students, setStudents,
       stats, setStats,
+      participationByLevel,
       handleStudentAdd,
       handleStudentUpdate, 
       handleStudentDelete,
-      handleBulkImport
+      handleBulkImport,
+      addTestData
     }}>
       <div className="admin-container">
         {/* Header */}
@@ -424,6 +451,12 @@ function AdminDashboard() {
           >
             🔍 Base de Datos
           </button>
+          <button 
+            className={activeTab === 'levels' ? 'active' : ''}
+            onClick={() => setActiveTab('levels')}
+          >
+            📚 Niveles Educativos
+          </button>
         </nav>
 
         {/* Content */}
@@ -435,6 +468,7 @@ function AdminDashboard() {
           {activeTab === 'reports' && <ReportsTab />}
           {activeTab === 'config' && <ConfigTab />}
           {activeTab === 'database' && <DatabaseTab />}
+          {activeTab === 'levels' && <EducationLevelsManager />}
         </main>
       </div>
     </AdminContext.Provider>
@@ -443,10 +477,38 @@ function AdminDashboard() {
 
 // Tab del Dashboard principal
 function DashboardTab() {
-  const { stats } = useContext(AdminContext);
+  const { stats, students, addTestData } = useContext(AdminContext);
   
   return (
     <div className="dashboard-tab">
+      {/* Debug section - show if no students */}
+      {students.length === 0 && (
+        <section className="debug-section" style={{ 
+          background: '#fff3cd', 
+          border: '1px solid #ffeaa7', 
+          borderRadius: '8px', 
+          padding: '15px', 
+          marginBottom: '20px' 
+        }}>
+          <h3>🧪 DEBUG: No hay estudiantes en la base de datos</h3>
+          <p>Para probar el sistema, puedes añadir datos de prueba:</p>
+          <button 
+            onClick={addTestData}
+            style={{
+              background: '#2ecc71',
+              color: 'white',
+              border: 'none',
+              padding: '10px 20px',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            🧪 AÑADIR DATOS DE PRUEBA
+          </button>
+        </section>
+      )}
+
       {/* Resumen General */}
       <section className="summary-section">
         <h2>📊 RESUMEN GENERAL</h2>
@@ -464,7 +526,7 @@ function DashboardTab() {
             <div className="summary-content">
               <h3>Han Votado</h3>
               <p className="summary-number">{stats.studentsVoted}</p>
-              <p className="summary-percentage">({((stats.studentsVoted / stats.totalStudents) * 100).toFixed(1)}%)</p>
+              <p className="summary-percentage">({stats.totalStudents > 0 ? ((stats.studentsVoted / stats.totalStudents) * 100).toFixed(1) : '0.0'}%)</p>
             </div>
           </div>
           
@@ -516,8 +578,19 @@ function ResultsCharts() {
   const presidentCandidates = candidates.filter(c => c.cargo === 'PRESIDENTE');
   const vicepresidentCandidates = candidates.filter(c => c.cargo === 'VICEPRESIDENTE');
   
-  const totalVotesPresident = presidentCandidates.reduce((sum, c) => sum + c.votos, 0);
-  const totalVotesVicepresident = vicepresidentCandidates.reduce((sum, c) => sum + c.votos, 0);
+  const totalVotesPresident = presidentCandidates.reduce((sum, c) => sum + (c.votos || 0), 0);
+  const totalVotesVicepresident = vicepresidentCandidates.reduce((sum, c) => sum + (c.votos || 0), 0);
+
+  if (candidates.length === 0) {
+    return (
+      <div className="results-charts">
+        <div className="no-data-message">
+          <p>🏆 No hay candidatos registrados.</p>
+          <p>Los resultados se mostrarán cuando se registren candidatos.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="results-charts">
@@ -526,13 +599,14 @@ function ResultsCharts() {
         <h3>PRESIDENTE ESTUDIANTIL</h3>
         <div className="results-bars">
           {presidentCandidates.map(candidate => {
-            const percentage = ((candidate.votos / totalVotesPresident) * 100).toFixed(1);
+            const votes = candidate.votos || 0;
+            const percentage = totalVotesPresident > 0 ? ((votes / totalVotesPresident) * 100).toFixed(1) : '0.0';
             return (
               <div key={candidate.id} className="result-bar">
                 <div className="candidate-info">
                   <span className="candidate-color" style={{backgroundColor: candidate.color}}></span>
                   <span className="candidate-name">{candidate.nombre} ({candidate.lista})</span>
-                  <span className="votes-count">{candidate.votos} votos ({percentage}%)</span>
+                  <span className="votes-count">{votes} votos ({percentage}%)</span>
                 </div>
                 <div className="progress-bar">
                   <div 
@@ -554,13 +628,14 @@ function ResultsCharts() {
         <h3>VICEPRESIDENTE ESTUDIANTIL</h3>
         <div className="results-bars">
           {vicepresidentCandidates.map(candidate => {
-            const percentage = ((candidate.votos / totalVotesVicepresident) * 100).toFixed(1);
+            const votes = candidate.votos || 0;
+            const percentage = totalVotesVicepresident > 0 ? ((votes / totalVotesVicepresident) * 100).toFixed(1) : '0.0';
             return (
               <div key={candidate.id} className="result-bar">
                 <div className="candidate-info">
                   <span className="candidate-color" style={{backgroundColor: candidate.color}}></span>
                   <span className="candidate-name">{candidate.nombre} ({candidate.lista})</span>
-                  <span className="votes-count">{candidate.votos} votos ({percentage}%)</span>
+                  <span className="votes-count">{votes} votos ({percentage}%)</span>
                 </div>
                 <div className="progress-bar">
                   <div 
@@ -582,6 +657,19 @@ function ResultsCharts() {
 
 // Componente de estadísticas de participación
 function ParticipationStats() {
+  const { participationByLevel } = useContext(AdminContext);
+  
+  if (!participationByLevel || participationByLevel.length === 0) {
+    return (
+      <div className="participation-stats">
+        <div className="no-data-message">
+          <p>📊 No hay datos de participación disponibles.</p>
+          <p>Los datos se calcularán automáticamente cuando haya estudiantes registrados.</p>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="participation-stats">
       {participationByLevel.map(level => (
@@ -651,15 +739,50 @@ function CandidatesTab() {
   const { candidates, setCandidates } = useContext(AdminContext);
   const [showForm, setShowForm] = useState(false);
   const [editingCandidate, setEditingCandidate] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleEdit = (candidate) => {
     setEditingCandidate(candidate);
     setShowForm(true);
   };
 
-  const handleDelete = (candidateId) => {
+  const handleDelete = async (candidateId) => {
     if (window.confirm('¿Está seguro de eliminar este candidato?')) {
-      setCandidates(candidates.filter(c => c.id !== candidateId));
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // Find the candidate to get its database info
+        const candidate = candidates.find(c => c.id === candidateId || c._id === candidateId);
+        if (!candidate) {
+          throw new Error('Candidato no encontrado');
+        }
+        
+        const dbId = candidate._id || candidateId;
+        const rev = candidate._rev;
+        
+        if (!rev) {
+          // If no _rev, it might be a local-only candidate
+          setCandidates(candidates.filter(c => (c.id || c._id) !== candidateId));
+          return;
+        }
+        
+        const result = await databaseService.deleteDocument('candidates', dbId, rev);
+        
+        if (result.success) {
+          // Remove from local state
+          setCandidates(candidates.filter(c => (c.id || c._id) !== candidateId));
+          console.log('✅ Candidato eliminado de la base de datos');
+        } else {
+          throw new Error(result.error || 'Error al eliminar candidato');
+        }
+      } catch (err) {
+        console.error('❌ Error al eliminar candidato:', err);
+        setError('Error al eliminar candidato: ' + err.message);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -667,28 +790,98 @@ function CandidatesTab() {
     <div className="candidates-tab">
       <div className="candidates-header">
         <h2>🏆 GESTIÓN DE CANDIDATOS</h2>
-        <button 
-          className="btn-primary"
-          onClick={() => {
-            setEditingCandidate(null);
-            setShowForm(true);
-          }}
-        >
-          ➕ Nuevo Candidato
-        </button>
+        <div className="candidates-controls">
+          <button 
+            className="btn-primary"
+            onClick={() => {
+              setEditingCandidate(null);
+              setShowForm(true);
+            }}
+            disabled={loading}
+          >
+            ➕ Nuevo Candidato
+          </button>
+          {loading && <span className="loading-indicator">⏳ Guardando...</span>}
+        </div>
       </div>
+      
+      {error && (
+        <div className="error-message">
+          ❌ {error}
+          <button onClick={() => setError(null)}>✕</button>
+        </div>
+      )}
 
       {showForm && (
         <CandidateForm 
           candidate={editingCandidate}
-          onSave={(candidate) => {
-            if (editingCandidate) {
-              setCandidates(candidates.map(c => c.id === candidate.id ? candidate : c));
-            } else {
-              setCandidates([...candidates, { ...candidate, id: `candidate_${Date.now()}` }]);
+          onSave={async (candidateData) => {
+            setLoading(true);
+            setError(null);
+            
+            try {
+              if (editingCandidate) {
+                // Update existing candidate
+                const dbId = editingCandidate._id;
+                const rev = editingCandidate._rev;
+                
+                if (dbId && rev) {
+                  const result = await databaseService.updateDocument(
+                    'candidates', 
+                    dbId, 
+                    rev, 
+                    candidateData, 
+                    DOC_TYPES.CANDIDATE
+                  );
+                  
+                  if (result.success) {
+                    // Update local state with new data
+                    setCandidates(candidates.map(c => 
+                      (c.id || c._id) === (editingCandidate.id || editingCandidate._id) 
+                        ? { ...candidateData, _id: result.doc._id, _rev: result.doc._rev }
+                        : c
+                    ));
+                    console.log('✅ Candidato actualizado en la base de datos');
+                  } else {
+                    throw new Error(result.error || 'Error al actualizar candidato');
+                  }
+                } else {
+                  // Local-only update
+                  setCandidates(candidates.map(c => 
+                    (c.id || c._id) === (editingCandidate.id || editingCandidate._id) 
+                      ? { ...candidateData, id: editingCandidate.id }
+                      : c
+                  ));
+                }
+              } else {
+                // Create new candidate
+                const result = await databaseService.createDocument(
+                  'candidates', 
+                  candidateData, 
+                  DOC_TYPES.CANDIDATE
+                );
+                
+                if (result.success) {
+                  // Add to local state with database info
+                  setCandidates([...candidates, {
+                    ...candidateData,
+                    _id: result.doc._id,
+                    _rev: result.doc._rev
+                  }]);
+                  console.log('✅ Candidato creado en la base de datos');
+                } else {
+                  throw new Error(result.error || 'Error al crear candidato');
+                }
+              }
+              
+              setShowForm(false);
+              setEditingCandidate(null);
+            } catch (err) {
+              console.error('❌ Error al guardar candidato:', err);
+              setError('Error al guardar candidato: ' + err.message);
+            } finally {
+              setLoading(false);
             }
-            setShowForm(false);
-            setEditingCandidate(null);
           }}
           onCancel={() => {
             setShowForm(false);
@@ -698,27 +891,58 @@ function CandidatesTab() {
       )}
 
       <div className="candidates-grid">
-        {candidates.map(candidate => (
-          <div key={candidate.id} className="candidate-card">
-            <img src={candidate.foto} alt={candidate.nombre} className="candidate-photo" />
-            <div className="candidate-details">
-              <h3>{candidate.nombre}</h3>
-              <p className="candidate-position">{candidate.cargo}</p>
-              <p className="candidate-list" style={{color: candidate.color}}>
-                {candidate.lista}
-              </p>
-              <p className="candidate-votes">Votos: {candidate.votos}</p>
-              <div className="candidate-actions">
-                <button onClick={() => handleEdit(candidate)} className="btn-edit">
-                  ✏️ Editar
-                </button>
-                <button onClick={() => handleDelete(candidate.id)} className="btn-delete">
-                  🗑️ Eliminar
-                </button>
-              </div>
-            </div>
+        {candidates.length === 0 ? (
+          <div className="empty-state">
+            <h3>📋 No hay candidatos registrados</h3>
+            <p>Haga clic en "Nuevo Candidato" para agregar el primer candidato.</p>
           </div>
-        ))}
+        ) : (
+          candidates.map(candidate => {
+            const candidateId = candidate._id || candidate.id;
+            const isFromDb = !!candidate._id;
+            
+            return (
+              <div key={candidateId} className="candidate-card">
+                <div className="candidate-status">
+                  {isFromDb ? '💾 Base de Datos' : '📝 Local'}
+                </div>
+                <img 
+                  src={candidate.foto || '/placeholder-avatar.png'} 
+                  alt={candidate.nombre || 'Candidato'} 
+                  className="candidate-photo"
+                  onError={(e) => {
+                    e.target.src = '/placeholder-avatar.png';
+                  }}
+                />
+                <div className="candidate-details">
+                  <h3>{candidate.nombre || 'Nombre no especificado'}</h3>
+                  <p className="candidate-position">{candidate.cargo || 'Cargo no especificado'}</p>
+                  <p className="candidate-list" style={{color: candidate.color || '#666'}}>
+                    {candidate.lista || candidate.ticketId || 'Lista no especificada'}
+                  </p>
+                  <p className="candidate-level">Nivel: {candidate.nivel || candidate.level || 'No especificado'}</p>
+                  <p className="candidate-votes">Votos: {candidate.votos || 0}</p>
+                  <div className="candidate-actions">
+                    <button 
+                      onClick={() => handleEdit(candidate)} 
+                      className="btn-edit"
+                      disabled={loading}
+                    >
+                      ✏️ Editar
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(candidateId)} 
+                      className="btn-delete"
+                      disabled={loading}
+                    >
+                      🗑️ Eliminar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );
@@ -822,6 +1046,27 @@ function CandidateForm({ candidate, onSave, onCancel }) {
             value={formData.propuestas}
             onChange={(e) => setFormData({...formData, propuestas: e.target.value})}
             rows="4"
+            placeholder="Ej:\nMejorar la infraestructura del colegio\nImplementar programas deportivos\nCrear espacios de estudio"
+          />
+        </div>
+        
+        <div className="form-group full-width">
+          <label>Experiencia</label>
+          <textarea
+            value={formData.experiencia}
+            onChange={(e) => setFormData({...formData, experiencia: e.target.value})}
+            rows="2"
+            placeholder="Ej: 3 años como representante estudiantil"
+          />
+        </div>
+        
+        <div className="form-group full-width">
+          <label>Slogan de Campaña</label>
+          <input
+            type="text"
+            value={formData.slogan}
+            onChange={(e) => setFormData({...formData, slogan: e.target.value})}
+            placeholder="Ej: Juntos hacia la excelencia académica"
           />
         </div>
 
@@ -924,11 +1169,11 @@ function ReportsTab() {
         <div className="stats-grid">
           <div className="stat-item">
             <span className="stat-label">Total de Votos:</span>
-            <span className="stat-value">{candidates.reduce((sum, c) => sum + c.votos, 0)}</span>
+            <span className="stat-value">{candidates.reduce((sum, c) => sum + (c.votos || 0), 0)}</span>
           </div>
           <div className="stat-item">
             <span className="stat-label">Participación:</span>
-            <span className="stat-value">{((stats.studentsVoted / stats.totalStudents) * 100).toFixed(1)}%</span>
+            <span className="stat-value">{stats.totalStudents > 0 ? ((stats.studentsVoted / stats.totalStudents) * 100).toFixed(1) : '0.0'}%</span>
           </div>
           <div className="stat-item">
             <span className="stat-label">Candidatos:</span>
@@ -946,7 +1191,10 @@ function ReportsTab() {
 
 // Tab de configuración
 function ConfigTab() {
-  const { students, setStudents } = useContext(AdminContext);
+  const { students, setStudents, candidates, setCandidates } = useContext(AdminContext);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
 
   const handleNewElection = async () => {
     const confirmMessage = `🚨 CONFIRMACIÓN REQUERIDA 🚨
@@ -965,11 +1213,54 @@ Escriba "CONFIRMAR" para proceder:`;
     const userConfirmation = prompt(confirmMessage);
     
     if (userConfirmation === "CONFIRMAR") {
+      setLoading(true);
+      setError(null);
+      setSuccess(null);
+      
       try {
-        // Reset all data
-        setStudents([]);
+        console.log('🗑️ Iniciando limpieza completa para nueva elección...');
         
-        // Clear localStorage data
+        // Step 1: Clear all database collections
+        const collections = ['students', 'candidates', 'votes', 'sessions'];
+        let totalDeleted = 0;
+        
+        for (const collection of collections) {
+          try {
+            const result = await databaseService.findDocuments(collection, {
+              selector: {}
+            });
+            
+            if (result.docs && result.docs.length > 0) {
+              console.log(`🗑️ Eliminando ${result.docs.length} documentos de ${collection}...`);
+              
+              for (const doc of result.docs) {
+                if (doc._id && doc._rev) {
+                  await databaseService.deleteDocument(collection, doc._id, doc._rev);
+                  totalDeleted++;
+                }
+              }
+            }
+          } catch (error) {
+            console.error(`❌ Error limpiando ${collection}:`, error);
+          }
+        }
+        
+        // Step 2: Create backup of the clean state
+        try {
+          const backupData = {
+            timestamp: new Date().toISOString(),
+            action: 'new_election_reset',
+            deletedRecords: totalDeleted,
+            collections: collections
+          };
+          
+          await databaseService.createDocument('election_config', backupData, DOC_TYPES.CONFIG);
+          console.log('💾 Backup de limpieza creado');
+        } catch (backupError) {
+          console.warn('⚠️ No se pudo crear backup de limpieza:', backupError);
+        }
+        
+        // Step 3: Clear localStorage data
         Object.keys(localStorage).forEach(key => {
           if (key.includes('student_states_') || 
               key.includes('votaciones_') || 
@@ -977,27 +1268,129 @@ Escriba "CONFIRMAR" para proceder:`;
             localStorage.removeItem(key);
           }
         });
-
-        // Show success message
-        alert('✅ Nueva elección iniciada exitosamente. Todos los datos han sido eliminados.');
         
-        // Optionally reload the page to ensure clean state
-        if (window.confirm('¿Desea recargar la página para asegurar un estado completamente limpio?')) {
-          window.location.reload();
-        }
+        // Step 4: Reset local state
+        setStudents([]);
+        setCandidates([]);
+        
+        setSuccess(`✅ Nueva elección iniciada exitosamente. Se eliminaron ${totalDeleted} registros de la base de datos.`);
+        
+        console.log(`✅ Nueva elección completada. Total eliminado: ${totalDeleted} registros`);
         
       } catch (error) {
-        console.error('Error al iniciar nueva elección:', error);
-        alert('❌ Error al iniciar nueva elección. Por favor, intente nuevamente.');
+        console.error('❌ Error al iniciar nueva elección:', error);
+        setError('Error al iniciar nueva elección: ' + error.message);
+      } finally {
+        setLoading(false);
       }
     } else if (userConfirmation !== null) {
       alert('❌ Confirmación incorrecta. La nueva elección no se ha iniciado.');
+    }
+  };
+  
+  const handleCreateBackup = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Get all data from database
+      const collections = ['students', 'candidates', 'votes', 'sessions'];
+      const backupData = {
+        timestamp: new Date().toISOString(),
+        type: 'manual_backup',
+        data: {}
+      };
+      
+      for (const collection of collections) {
+        const result = await databaseService.findDocuments(collection, {
+          selector: {}
+        });
+        backupData.data[collection] = result.docs || [];
+      }
+      
+      // Save backup to database
+      const result = await databaseService.createDocument('election_config', backupData, DOC_TYPES.CONFIG);
+      
+      if (result.success) {
+        setSuccess(`✅ Backup creado exitosamente. ID: ${result.doc._id}`);
+        console.log('📦 Backup creado:', result.doc._id);
+      } else {
+        throw new Error(result.error || 'Error al crear backup');
+      }
+    } catch (err) {
+      console.error('❌ Error al crear backup:', err);
+      setError('Error al crear backup: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleExportData = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Get all data from database
+      const collections = ['students', 'candidates', 'votes', 'sessions'];
+      const exportData = {
+        exportDate: new Date().toISOString(),
+        version: '1.0',
+        collections: {}
+      };
+      
+      for (const collection of collections) {
+        const result = await databaseService.findDocuments(collection, {
+          selector: {}
+        });
+        exportData.collections[collection] = result.docs || [];
+      }
+      
+      // Create and download JSON file
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
+        type: 'application/json' 
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `elecciones_export_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      setSuccess('✅ Datos exportados exitosamente');
+      console.log('📤 Datos exportados');
+    } catch (err) {
+      console.error('❌ Error al exportar datos:', err);
+      setError('Error al exportar datos: ' + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="config-tab">
       <h2>⚙️ CONFIGURACIÓN DEL SISTEMA</h2>
+      
+      {loading && (
+        <div className="global-loading">
+          ⏳ Procesando operación...
+        </div>
+      )}
+      
+      {error && (
+        <div className="global-error">
+          ❌ {error}
+          <button onClick={() => setError(null)}>✕</button>
+        </div>
+      )}
+      
+      {success && (
+        <div className="global-success">
+          {success}
+          <button onClick={() => setSuccess(null)}>✕</button>
+        </div>
+      )}
       
       <div className="config-sections">
         <div className="config-section">
@@ -1058,9 +1451,27 @@ Escriba "CONFIRMAR" para proceder:`;
         <div className="config-section">
           <h3>💾 Backup y Seguridad</h3>
           <div className="backup-config">
-            <button className="btn-backup">💾 Crear Backup</button>
-            <button className="btn-restore">📥 Restaurar Backup</button>
-            <button className="btn-export">📤 Exportar Datos</button>
+            <button 
+              className="btn-backup"
+              onClick={handleCreateBackup}
+              disabled={loading}
+            >
+              💾 Crear Backup
+            </button>
+            <button 
+              className="btn-restore"
+              onClick={() => alert('🔍 Funcionalidad disponible en el Panel de Transición')}
+              disabled={loading}
+            >
+              📥 Restaurar Backup
+            </button>
+            <button 
+              className="btn-export"
+              onClick={handleExportData}
+              disabled={loading}
+            >
+              📤 Exportar Datos
+            </button>
           </div>
         </div>
 
@@ -1069,12 +1480,40 @@ Escriba "CONFIRMAR" para proceder:`;
           <div className="election-reset">
             <div className="warning-box">
               <h4>⚠️ ADVERTENCIA</h4>
-              <p>Esta acción eliminará todos los datos de votación actuales y reiniciará el sistema para una nueva elección.</p>
+              <p>Esta acción eliminará <strong>TODOS</strong> los datos de la base de datos:</p>
+              <ul>
+                <li>• Todos los estudiantes importados</li>
+                <li>• Todos los candidatos registrados</li>
+                <li>• Todos los votos emitidos</li>
+                <li>• Todas las sesiones de votación</li>
+              </ul>
               <p><strong>Los datos eliminados NO se pueden recuperar.</strong></p>
             </div>
+            
+            {loading && (
+              <div className="loading-indicator">
+                ⏳ Eliminando datos de la base de datos...
+              </div>
+            )}
+            
+            {error && (
+              <div className="error-message">
+                ❌ {error}
+                <button onClick={() => setError(null)}>✕</button>
+              </div>
+            )}
+            
+            {success && (
+              <div className="success-message">
+                {success}
+                <button onClick={() => setSuccess(null)}>✕</button>
+              </div>
+            )}
+            
             <button 
               className="btn-danger-large"
-              onClick={() => handleNewElection()}
+              onClick={handleNewElection}
+              disabled={loading}
             >
               🗳️ Iniciar Nueva Elección
             </button>

@@ -26,13 +26,26 @@ export const DOC_TYPES = {
   BACKUP: 'backup'
 }
 
-// Education levels
-export const EDUCATION_LEVELS = {
+// Education levels - configurable
+export const DEFAULT_EDUCATION_LEVELS = {
+  PREPARATORIA: 'PREPARATORIA',
   BACHILLERATO: 'BACHILLERATO',
   BASICA_SUPERIOR: 'BASICA_SUPERIOR', 
   BASICA_MEDIA: 'BASICA_MEDIA',
   BASICA_ELEMENTAL: 'BASICA_ELEMENTAL'
 }
+
+// Education level display names (configurable)
+export const EDUCATION_LEVEL_NAMES = {
+  PREPARATORIA: 'Preparatoria',
+  BACHILLERATO: 'Bachillerato',
+  BASICA_SUPERIOR: 'Básica Superior',
+  BASICA_MEDIA: 'Básica Media',
+  BASICA_ELEMENTAL: 'Básica Elemental'
+}
+
+// For backward compatibility
+export const EDUCATION_LEVELS = DEFAULT_EDUCATION_LEVELS
 
 class IndexedDBService {
   constructor() {
@@ -185,6 +198,7 @@ class IndexedDBService {
           }
 
           resolve({
+            success: true,
             docs: documents,
             total: documents.length
           })
@@ -198,7 +212,7 @@ class IndexedDBService {
 
     } catch (error) {
       console.error(`❌ Find documents error:`, error)
-      return { docs: [], total: 0, error: error.message }
+      return { success: false, docs: [], total: 0, error: error.message }
     }
   }
 

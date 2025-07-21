@@ -8,19 +8,21 @@ const StudentCard = ({ student, status, index, onStartVoting }) => {
     studentStates, 
     markStudentAsVoted, 
     markStudentAsAbsent, 
-    markStudentAsPresent 
+    markStudentAsPresent,
+    getStudentId 
   } = useStudents();
   
   const [isProcessing, setIsProcessing] = useState(false);
   
-  const studentState = studentStates[student.id];
+  const studentId = getStudentId(student);
+  const studentState = studentStates[studentId];
 
   const handleStartVoting = async () => {
     setIsProcessing(true);
     
     // Simular breve delay de preparación
     setTimeout(() => {
-      if (window.confirm(`¿Confirmar inicio de votación para ${student.nombres} ${student.apellidos}?`)) {
+      if (window.confirm(`¿Confirmar inicio de votación para ${student.nombres || student.nombre} ${student.apellidos}?`)) {
         // Llamar al callback para abrir la interfaz de votación
         if (onStartVoting) {
           onStartVoting(student);
@@ -31,14 +33,14 @@ const StudentCard = ({ student, status, index, onStartVoting }) => {
   };
 
   const handleMarkAbsent = () => {
-    if (window.confirm(`¿Marcar a ${student.nombres} ${student.apellidos} como ausente?`)) {
-      markStudentAsAbsent(student.id);
+    if (window.confirm(`¿Marcar a ${student.nombres || student.nombre} ${student.apellidos} como ausente?`)) {
+      markStudentAsAbsent(student);
     }
   };
 
   const handleMarkPresent = () => {
-    if (window.confirm(`¿Marcar a ${student.nombres} ${student.apellidos} como presente?`)) {
-      markStudentAsPresent(student.id);
+    if (window.confirm(`¿Marcar a ${student.nombres || student.nombre} ${student.apellidos} como presente?`)) {
+      markStudentAsPresent(student);
     }
   };
 
@@ -81,10 +83,10 @@ const StudentCard = ({ student, status, index, onStartVoting }) => {
 
       <div className="student-info">
         <h3 className="student-name">
-          {student.apellidos}, {student.nombres}
+          {student.apellidos}, {student.nombres || student.nombre}
         </h3>
         <div className="student-details">
-          <span className="student-course">🎓 {student.curso}</span>
+          <span className="student-course">🎓 {student.curso || student.course}</span>
           <span className="student-id">📋 {student.cedula}</span>
         </div>
       </div>

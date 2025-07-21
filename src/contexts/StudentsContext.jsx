@@ -1,51 +1,10 @@
 // src/contexts/StudentsContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import { useDatabase, useStudents as useStudentsDB } from '../hooks/useDatabase.js';
+import { coursesMatch, findMatchingCourse, generateCourseSuggestions } from '../utils/courseMatching.js';
 
 const StudentsContext = createContext();
-
-// Datos mock de estudiantes por curso
-const MOCK_STUDENTS = {
-  '1ro Bach A': [
-    { id: 'bach1a_001', cedula: '0987654321', nombres: 'María José', apellidos: 'García López', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_002', cedula: '0987654322', nombres: 'Carlos Eduardo', apellidos: 'Martínez Sánchez', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_003', cedula: '0987654323', nombres: 'Ana Lucía', apellidos: 'Rodríguez Torres', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_004', cedula: '0987654324', nombres: 'José Antonio', apellidos: 'Silva Morales', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_005', cedula: '0987654325', nombres: 'Pedro Alejandro', apellidos: 'Alvarado Díaz', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_006', cedula: '0987654326', nombres: 'Isabella María', apellidos: 'Castro Herrera', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_007', cedula: '0987654327', nombres: 'Roberto Carlos', apellidos: 'Jiménez Vargas', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_008', cedula: '0987654328', nombres: 'Camila Andrea', apellidos: 'López Moreno', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_009', cedula: '0987654329', nombres: 'Miguel Ángel', apellidos: 'Herrera Vega', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_010', cedula: '0987654330', nombres: 'Valentina Sofia', apellidos: 'Torres Luna', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_011', cedula: '0987654331', nombres: 'Andrés Felipe', apellidos: 'Vargas Silva', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_012', cedula: '0987654332', nombres: 'Sofía Elena', apellidos: 'Mendoza Ruiz', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_013', cedula: '0987654333', nombres: 'Diego Fernando', apellidos: 'Paredes Castro', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_014', cedula: '0987654334', nombres: 'Fernanda Isabel', apellidos: 'Guerrero Vega', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_015', cedula: '0987654335', nombres: 'Sebastián David', apellidos: 'Morales Torres', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_016', cedula: '0987654336', nombres: 'Daniela Alejandra', apellidos: 'Rojas Martín', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_017', cedula: '0987654337', nombres: 'Alejandro José', apellidos: 'Sandoval Pérez', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_018', cedula: '0987654338', nombres: 'Gabriela María', apellidos: 'Delgado Flores', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_019', cedula: '0987654339', nombres: 'Kevin Andrés', apellidos: 'Molina Espinoza', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_020', cedula: '0987654340', nombres: 'Nicole Paola', apellidos: 'Salazar Romero', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_021', cedula: '0987654341', nombres: 'Mateo Santiago', apellidos: 'Aguilar Vera', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_022', cedula: '0987654342', nombres: 'Andrea Carolina', apellidos: 'Navarro Soto', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_023', cedula: '0987654343', nombres: 'Francisco Javier', apellidos: 'Ramírez Ortega', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_024', cedula: '0987654344', nombres: 'Melanie Victoria', apellidos: 'Cordero Bravo', curso: '1ro Bach A', nivel: 'BACHILLERATO' },
-    { id: 'bach1a_025', cedula: '0987654345', nombres: 'Emilio Sebastián', apellidos: 'Pacheco Medina', curso: '1ro Bach A', nivel: 'BACHILLERATO' }
-  ],
-  '1ro Bach B': [
-    { id: 'bach1b_001', cedula: '0987654346', nombres: 'Ariana Michelle', apellidos: 'Vásquez Reyes', curso: '1ro Bach B', nivel: 'BACHILLERATO' },
-    { id: 'bach1b_002', cedula: '0987654347', nombres: 'Joaquín Gabriel', apellidos: 'Figueroa Morales', curso: '1ro Bach B', nivel: 'BACHILLERATO' },
-    { id: 'bach1b_003', cedula: '0987654348', nombres: 'Samantha Nicole', apellidos: 'Cabrera León', curso: '1ro Bach B', nivel: 'BACHILLERATO' }
-    // Más estudiantes...
-  ],
-  '8vo A': [
-    { id: '8voa_001', cedula: '0987654400', nombres: 'Luis Fernando', apellidos: 'González Pérez', curso: '8vo A', nivel: 'BASICA_SUPERIOR' },
-    { id: '8voa_002', cedula: '0987654401', nombres: 'María Fernanda', apellidos: 'Ramírez Castro', curso: '8vo A', nivel: 'BASICA_SUPERIOR' }
-    // Más estudiantes...
-  ]
-  // Agregar más cursos según necesidades de prueba
-};
 
 export const StudentsProvider = ({ children }) => {
   const { user } = useAuth();
@@ -56,17 +15,98 @@ export const StudentsProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Cargar estudiantes del curso cuando el usuario cambie
+  const { isReady } = useDatabase();
+  const { 
+    students: dbStudents, 
+    loading: dbLoading, 
+    error: dbError,
+    loadStudents
+  } = useStudentsDB();
+
+  // Cargar estudiantes del curso cuando el usuario cambie o la base de datos esté lista
   useEffect(() => {
-    if (user && user.course) {
+    console.log('🔍 StudentsContext useEffect triggered:', {
+      user: user?.course,
+      isReady,
+      dbStudentsLength: dbStudents?.length,
+      dbStudentsAvailable: !!dbStudents
+    });
+    
+    if (user && user.course && isReady && dbStudents !== undefined) {
+      console.log('📚 Cargando estudiantes para curso del tutor:', user.course);
+      console.log('📊 Total estudiantes en DB antes de filtrar:', dbStudents.length);
       loadStudentsForCourse(user.course);
       loadStudentStates(user.course);
+    } else {
+      console.log('⚠️ Condiciones no cumplidas para cargar estudiantes:', {
+        hasUser: !!user,
+        hasCourse: !!user?.course,
+        isReady,
+        hasDbStudents: !!dbStudents,
+        dbStudentsUndefined: dbStudents === undefined,
+        dbStudentsLength: dbStudents?.length
+      });
     }
-  }, [user]);
+  }, [user, isReady, dbStudents]);
 
   const loadStudentsForCourse = (course) => {
-    const courseStudents = MOCK_STUDENTS[course] || [];
+    // Verificar que dbStudents esté disponible
+    if (!dbStudents || !Array.isArray(dbStudents)) {
+      console.warn('🟡 dbStudents no está disponible aún');
+      setStudents([]);
+      setLoading(false);
+      return;
+    }
+    
+    // Debug: mostrar todos los cursos disponibles
+    const allCourses = [...new Set(dbStudents.map(s => s.curso || s.course).filter(Boolean))];
+    console.log('📋 Cursos disponibles en la base de datos:', allCourses);
+    console.log('🎯 Curso que busca el tutor:', course);
+    
+    // Filtrar estudiantes de la base de datos por curso (exact match primero)
+    let courseStudents = dbStudents.filter(student => {
+      const studentCourse = student.curso || student.course;
+      const exactMatch = studentCourse === course;
+      const flexMatch = coursesMatch(studentCourse, course);
+      console.log(`🔍 Estudiante "${student.nombres} ${student.apellidos}" curso:"${studentCourse}" vs tutor:"${course}"`);
+      console.log(`   ├─ Exact match: ${exactMatch ? '✅' : '❌'}`);
+      console.log(`   └─ Flex match: ${flexMatch ? '✅' : '❌'}`);
+      return exactMatch || flexMatch;
+    });
+    
+    // Si no se encontraron coincidencias exactas, buscar coincidencias parciales
+    if (courseStudents.length === 0) {
+      const matchingCourse = findMatchingCourse(course, allCourses);
+      if (matchingCourse) {
+        console.log(`🔄 Curso alternativo encontrado: "${matchingCourse}" para "${course}"`);
+        courseStudents = dbStudents.filter(student => {
+          const studentCourse = student.curso || student.course;
+          return coursesMatch(studentCourse, matchingCourse);
+        });
+      } else {
+        // Generar sugerencias
+        const suggestions = generateCourseSuggestions(course, allCourses);
+        console.log('💡 Sugerencias de cursos:', suggestions.slice(0, 3));
+      }
+    }
+    
+    console.log(`📚 Cargando estudiantes para curso: "${course}"`);
+    console.log(`📊 Estudiantes encontrados: ${courseStudents.length}`);
+    
+    if (courseStudents.length === 0) {
+      console.log('⚠️ No se encontraron estudiantes para este curso. Detalles:');
+      console.log('- Total estudiantes en BD:', dbStudents.length);
+      console.log('- Cursos únicos:', allCourses);
+      console.log('- Ejemplo de estudiante:', dbStudents[0]);
+    }
+    
     setStudents(courseStudents);
+    setLoading(false);
+  };
+
+  // Helper to get consistent student ID
+  const getStudentId = (student) => {
+    return student._id || student.id || student.cedula;
   };
 
   const loadStudentStates = (course) => {
@@ -74,19 +114,36 @@ export const StudentsProvider = ({ children }) => {
     const savedStates = localStorage.getItem(statesKey);
     
     if (savedStates) {
-      setStudentStates(JSON.parse(savedStates));
+      try {
+        setStudentStates(JSON.parse(savedStates));
+        console.log(`💾 Estados cargados desde localStorage para ${course}`);
+      } catch (error) {
+        console.error('❌ Error al parsear estados guardados:', error);
+        setStudentStates({});
+      }
     } else {
-      // Inicializar estados por defecto
+      // Inicializar estados por defecto basándose en estudiantes de la base de datos
       const initialStates = {};
-      const courseStudents = MOCK_STUDENTS[course] || [];
       
-      courseStudents.forEach(student => {
-        initialStates[student.id] = {
-          status: 'pending', // pending, voted, absent
-          votedAt: null,
-          isAbsent: false
-        };
-      });
+      // Verificar que dbStudents esté disponible
+      if (dbStudents && Array.isArray(dbStudents)) {
+        const courseStudents = dbStudents.filter(student => 
+          student.curso === course || student.course === course
+        );
+        
+        courseStudents.forEach(student => {
+          const studentId = getStudentId(student);
+          initialStates[studentId] = {
+            status: 'pending', // pending, voted, absent
+            votedAt: null,
+            isAbsent: false
+          };
+        });
+        
+        console.log(`🎆 Estados inicializados para ${courseStudents.length} estudiantes en ${course}`);
+      } else {
+        console.warn('🟡 No hay estudiantes disponibles para inicializar estados');
+      }
       
       setStudentStates(initialStates);
       localStorage.setItem(statesKey, JSON.stringify(initialStates));
@@ -100,7 +157,8 @@ export const StudentsProvider = ({ children }) => {
     }
   };
 
-  const markStudentAsVoted = (studentId) => {
+  const markStudentAsVoted = (student) => {
+    const studentId = typeof student === 'string' ? student : getStudentId(student);
     const newStates = {
       ...studentStates,
       [studentId]: {
@@ -111,11 +169,13 @@ export const StudentsProvider = ({ children }) => {
       }
     };
     
+    console.log(`✅ Estudiante marcado como votado: ${studentId}`);
     setStudentStates(newStates);
     saveStudentStates(newStates);
   };
 
-  const markStudentAsAbsent = (studentId) => {
+  const markStudentAsAbsent = (student) => {
+    const studentId = typeof student === 'string' ? student : getStudentId(student);
     const newStates = {
       ...studentStates,
       [studentId]: {
@@ -126,11 +186,13 @@ export const StudentsProvider = ({ children }) => {
       }
     };
     
+    console.log(`❌ Estudiante marcado como ausente: ${studentId}`);
     setStudentStates(newStates);
     saveStudentStates(newStates);
   };
 
-  const markStudentAsPresent = (studentId) => {
+  const markStudentAsPresent = (student) => {
+    const studentId = typeof student === 'string' ? student : getStudentId(student);
     const newStates = {
       ...studentStates,
       [studentId]: {
@@ -141,6 +203,7 @@ export const StudentsProvider = ({ children }) => {
       }
     };
     
+    console.log(`⏳ Estudiante marcado como presente: ${studentId}`);
     setStudentStates(newStates);
     saveStudentStates(newStates);
   };
@@ -152,16 +215,18 @@ export const StudentsProvider = ({ children }) => {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(student => 
-        student.nombres.toLowerCase().includes(term) ||
-        student.apellidos.toLowerCase().includes(term) ||
-        `${student.nombres} ${student.apellidos}`.toLowerCase().includes(term)
+        (student.nombres || student.nombre || '').toLowerCase().includes(term) ||
+        (student.apellidos || '').toLowerCase().includes(term) ||
+        `${student.nombres || student.nombre || ''} ${student.apellidos || ''}`.toLowerCase().includes(term) ||
+        (student.cedula || '').toString().includes(term)
       );
     }
 
     // Filtrar por tipo
     if (filterType !== 'all') {
       filtered = filtered.filter(student => {
-        const state = studentStates[student.id];
+        const studentId = getStudentId(student);
+        const state = studentStates[studentId];
         if (!state) return filterType === 'pending';
         return state.status === filterType;
       });
@@ -176,7 +241,8 @@ export const StudentsProvider = ({ children }) => {
     const absent = [];
 
     students.forEach(student => {
-      const state = studentStates[student.id];
+      const studentId = getStudentId(student);
+      const state = studentStates[studentId];
       if (!state || state.status === 'pending') {
         pending.push(student);
       } else if (state.status === 'voted') {
@@ -321,6 +387,10 @@ export const StudentsProvider = ({ children }) => {
     setSearchTerm,
     filterType,
     setFilterType,
+    loading: loading || dbLoading,
+    error: error || dbError,
+    isReady: isReady && dbStudents !== undefined,
+    totalStudentsInDB: dbStudents ? dbStudents.length : 0,
     markStudentAsVoted,
     markStudentAsAbsent,
     markStudentAsPresent,
@@ -336,7 +406,18 @@ export const StudentsProvider = ({ children }) => {
     bulkUpdateStatus,
     getStudentsByLevel,
     getStudentsByCourse,
-    searchStudents
+    searchStudents,
+    // Utility methods
+    getStudentId,
+    refreshStudents: () => {
+      console.log('🔄 RefreshStudents called');
+      if (isReady) {
+        loadStudents();
+        if (user && user.course) {
+          loadStudentsForCourse(user.course);
+        }
+      }
+    }
   };
 
   return (
@@ -346,10 +427,13 @@ export const StudentsProvider = ({ children }) => {
   );
 };
 
-export const useStudents = () => {
+export const useStudentsContext = () => {
   const context = useContext(StudentsContext);
   if (!context) {
-    throw new Error('useStudents debe ser usado dentro de StudentsProvider');
+    throw new Error('useStudentsContext debe ser usado dentro de StudentsProvider');
   }
   return context;
 };
+
+// Alias for backward compatibility
+export const useStudents = useStudentsContext;

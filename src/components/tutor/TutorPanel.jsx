@@ -4,24 +4,48 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useStudents } from '../../contexts/StudentsContext';
 import StudentList from './StudentList';
 import VotingBooth from '../voting/VotingBooth';
+import TutorDebugInfo from './TutorDebugInfo';
 import './TutorPanel.css';
 
 const TutorPanel = () => {
   const { user, isOnline } = useAuth();
   const { 
+    students,
     searchTerm, 
     setSearchTerm, 
     filterType, 
     setFilterType, 
     getStudentsByStatus, 
     getStats,
-    markStudentAsVoted 
+    markStudentAsVoted,
+    loading,
+    error,
+    isReady,
+    totalStudentsInDB
   } = useStudents();
 
   const [activeSection, setActiveSection] = useState('pending'); // pending, voted, absent
   const [votingStudent, setVotingStudent] = useState(null); // Estudiante en proceso de votación
+  
+  // Debug info
+  console.log('🎭 TutorPanel Debug:', {
+    userCourse: user?.course,
+    studentsCount: students?.length || 0,
+    totalInDB: totalStudentsInDB,
+    loading,
+    error,
+    isReady
+  });
+  
   const stats = getStats();
   const { pending, voted, absent } = getStudentsByStatus();
+  
+  console.log('📊 TutorPanel Stats:', {
+    stats,
+    pending: pending?.length || 0,
+    voted: voted?.length || 0,
+    absent: absent?.length || 0
+  });
 
   const handleStartVoting = (student) => {
     setVotingStudent(student);
@@ -108,6 +132,7 @@ const TutorPanel = () => {
   // Panel principal del tutor
   return (
     <div className="tutor-panel">
+      <TutorDebugInfo />
       {/* Header con estadísticas */}
       <div className="panel-header">
         <div className="header-info">

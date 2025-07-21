@@ -147,6 +147,7 @@ export function useStudents() {
    * Load all students
    */
   const loadStudents = useCallback(async (filters = {}) => {
+    console.log('📚 useStudents: loadStudents called with filters:', filters);
     setLoading(true)
     setError(null)
     
@@ -159,10 +160,17 @@ export function useStudents() {
         sort: ['level', 'course', 'numero']
       }
 
-      const result = await databaseService.findDocuments('students', query)
+      console.log('🔍 useStudents: Executing query:', query);
+      const result = await databaseService.findDocuments('students', query);
+      console.log('📊 useStudents: Query result:', {
+        docsCount: result.docs?.length || 0,
+        success: result.success,
+        error: result.error
+      });
       setStudents(result.docs || [])
       
     } catch (err) {
+      console.error('❌ useStudents: Error loading students:', err);
       setError(err.message)
       setStudents([])
     } finally {
@@ -288,7 +296,8 @@ export function useStudents() {
 
   // Load students on mount
   useEffect(() => {
-    loadStudents()
+    console.log('🎆 useStudents hook: Loading students on mount');
+    loadStudents();
   }, [loadStudents])
 
   return {
