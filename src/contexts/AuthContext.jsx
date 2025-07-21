@@ -3,33 +3,196 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
 
-// Códigos de activación predefinidos con sus cursos
+// CÓDIGOS DE ACTIVACIÓN ESPECÍFICOS POR CURSO
+// Cada código permite acceso a UN SOLO curso específico
+// Formato: ELEC2024-[IDENTIFICADOR_CURSO]
 const ACTIVATION_CODES = {
-  'ELEC2024-BASICA-ELEM': {
-    level: 'BASICA_ELEMENTAL',
-    name: 'Básica Elemental',
-    courses: ['1ro A', '1ro B', '2do A', '2do B', '3ro A', '3ro B', '4to A', '4to B'],
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-BASICA-MEDIA': {
-    level: 'BASICA_MEDIA',
-    name: 'Básica Media',
-    courses: ['5to A', '5to B', '6to A', '6to B', '7mo A', '7mo B'],
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-BASICA-SUP': {
-    level: 'BASICA_SUPERIOR',
-    name: 'Básica Superior',
-    courses: ['8vo A', '8vo B', '9no A', '9no B', '10mo A', '10mo B'],
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-BACH': {
+  // BACHILLERATO - Códigos específicos por curso
+  'ELEC2024-1ROBACHA': {
     level: 'BACHILLERATO',
     name: 'Bachillerato',
-    courses: ['1ro Bach A', '1ro Bach B', '2do Bach A', '2do Bach B', '3ro Bach A', '3ro Bach B'],
+    course: '1ro Bach A', // UN SOLO CURSO
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-1ROBACHB': {
+    level: 'BACHILLERATO',
+    name: 'Bachillerato',
+    course: '1ro Bach B',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-2ROBACHA': {
+    level: 'BACHILLERATO',
+    name: 'Bachillerato',
+    course: '2do Bach A',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-2ROBACHB': {
+    level: 'BACHILLERATO',
+    name: 'Bachillerato',
+    course: '2do Bach B',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-3ROBACHA': {
+    level: 'BACHILLERATO',
+    name: 'Bachillerato',
+    course: '3ro Bach A',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-3ROBACHB': {
+    level: 'BACHILLERATO',
+    name: 'Bachillerato',
+    course: '3ro Bach B',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+
+  // BÁSICA SUPERIOR - Códigos específicos por curso  
+  'ELEC2024-8VOA': {
+    level: 'BASICA_SUPERIOR',
+    name: 'Básica Superior',
+    course: '8vo A',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-8VOB': {
+    level: 'BASICA_SUPERIOR',
+    name: 'Básica Superior',
+    course: '8vo B',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-9NOA': {
+    level: 'BASICA_SUPERIOR',
+    name: 'Básica Superior',
+    course: '9no A',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-9NOB': {
+    level: 'BASICA_SUPERIOR',
+    name: 'Básica Superior',
+    course: '9no B',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-10MOA': {
+    level: 'BASICA_SUPERIOR',
+    name: 'Básica Superior',
+    course: '10mo A',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-10MOB': {
+    level: 'BASICA_SUPERIOR',
+    name: 'Básica Superior',
+    course: '10mo B',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+
+  // BÁSICA MEDIA - Códigos específicos por curso
+  'ELEC2024-5TOA': {
+    level: 'BASICA_MEDIA',
+    name: 'Básica Media',
+    course: '5to A',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-5TOB': {
+    level: 'BASICA_MEDIA',
+    name: 'Básica Media',
+    course: '5to B',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-6TOA': {
+    level: 'BASICA_MEDIA',
+    name: 'Básica Media',
+    course: '6to A',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-6TOB': {
+    level: 'BASICA_MEDIA',
+    name: 'Básica Media',
+    course: '6to B',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-7MOA': {
+    level: 'BASICA_MEDIA',
+    name: 'Básica Media',
+    course: '7mo A',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-7MOB': {
+    level: 'BASICA_MEDIA',
+    name: 'Básica Media',
+    course: '7mo B',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+
+  // BÁSICA ELEMENTAL - Códigos específicos por curso
+  'ELEC2024-1ROA': {
+    level: 'BASICA_ELEMENTAL',
+    name: 'Básica Elemental',
+    course: '1ro A',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-1ROB': {
+    level: 'BASICA_ELEMENTAL',
+    name: 'Básica Elemental',
+    course: '1ro B',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-2DOA': {
+    level: 'BASICA_ELEMENTAL',
+    name: 'Básica Elemental',
+    course: '2do A',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-2DOB': {
+    level: 'BASICA_ELEMENTAL',
+    name: 'Básica Elemental',
+    course: '2do B',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-3ROA': {
+    level: 'BASICA_ELEMENTAL',
+    name: 'Básica Elemental',
+    course: '3ro A',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-3ROB': {
+    level: 'BASICA_ELEMENTAL',
+    name: 'Básica Elemental',
+    course: '3ro B',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-4TOA': {
+    level: 'BASICA_ELEMENTAL',
+    name: 'Básica Elemental',
+    course: '4to A',
+    validFrom: '2024-03-15T08:00:00Z',
+    validUntil: '2024-03-15T16:00:00Z'
+  },
+  'ELEC2024-4TOB': {
+    level: 'BASICA_ELEMENTAL',
+    name: 'Básica Elemental',
+    course: '4to B',
     validFrom: '2024-03-15T08:00:00Z',
     validUntil: '2024-03-15T16:00:00Z'
   }
@@ -152,38 +315,18 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(true);
     
     try {
-      // Validar código de activación
-      const validation = validateActivationCode(activationCode);
-      if (!validation.valid) {
-        throw new Error(validation.error);
-      }
-
-      const codeData = validation.data;
-
-      // Verificar que el curso es válido (simplificado)
-      // Permitir cursos hardcodeados O cualquier curso que existe en la BD
-      const isHardcodedCourse = codeData.courses.includes(course);
-      
-      if (!isHardcodedCourse) {
-        // Si no es hardcodeado, verificar si existe en la BD
-        console.log(`⚠️ Curso "${course}" no está en lista hardcodeada, pero permitiendo acceso`);
-        console.log('- Cursos hardcodeados para', codeData.name, ':', codeData.courses);
-        console.log('✅ Permitiendo acceso con curso de BD:', course);
-      } else {
-        console.log(`✅ Curso "${course}" está en lista hardcodeada para ${codeData.name}`);
-      }
-
-      // Crear sesión de usuario
+      // El código ya fue validado en TutorLogin, solo crear la sesión
       const session = {
         role: 'tutor',
         activationCode,
         course,
-        level: codeData.level,
-        levelName: codeData.name,
+        level: 'DYNAMIC', // Nivel será determinado por el sistema dinámico
+        levelName: course, // Usar el curso como nombre del nivel
         tutorName: tutorName || `Tutor ${course}`,
         loginTime: new Date().toISOString(),
         sessionId: generateSessionId()
       };
+
 
       // Guardar sesión
       localStorage.setItem('voting_session', JSON.stringify(session));
@@ -233,8 +376,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const getAvailableCourses = (activationCode) => {
+    // Con códigos específicos, cada código tiene UN SOLO curso
     const codeData = ACTIVATION_CODES[activationCode];
-    return codeData ? codeData.courses : [];
+    return codeData ? [codeData.course] : [];
   };
 
   const value = {

@@ -76,9 +76,36 @@
   box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
 }
 
+.form-input.success {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+}
+
 .form-input.error {
   border-color: #e53e3e;
   box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1);
+}
+
+.validation-status {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #f0f9ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1e40af;
+  font-weight: 500;
+}
+
+.course-detected {
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #16a34a;
+  font-weight: 500;
 }
 
 .form-select.disabled {

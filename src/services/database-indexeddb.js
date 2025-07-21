@@ -13,7 +13,8 @@ const STORES = {
   candidates: 'candidates',
   votes: 'votes',
   sessions: 'sessions',
-  election_config: 'election_config'
+  election_config: 'election_config',
+  activation_codes: 'activation_codes'  // Nueva tabla para códigos dinámicos
 }
 
 // Document types for consistency
@@ -23,7 +24,8 @@ export const DOC_TYPES = {
   VOTE: 'vote',
   SESSION: 'session',
   CONFIG: 'election_config',
-  BACKUP: 'backup'
+  BACKUP: 'backup',
+  ACTIVATION_CODE: 'activation_code'  // Nuevo tipo para códigos
 }
 
 // Education levels - configurable
@@ -103,6 +105,11 @@ class IndexedDBService {
               store.createIndex('studentId', 'studentId', { unique: false })
               store.createIndex('candidateId', 'candidateId', { unique: false })
               store.createIndex('timestamp', 'timestamp', { unique: false })
+            } else if (storeName === 'activation_codes') {
+              store.createIndex('code', 'code', { unique: true })  // Código único
+              store.createIndex('course', 'course', { unique: false })  // Búsqueda por curso
+              store.createIndex('is_active', 'is_active', { unique: false })  // Filtrar activos
+              store.createIndex('generated_at', 'generated_at', { unique: false })  // Ordenar por fecha
             }
             
             console.log(`📊 Created object store: ${storeName}`)

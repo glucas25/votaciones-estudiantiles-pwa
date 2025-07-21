@@ -4,8 +4,10 @@ import StudentManager from './StudentManager';
 import DataTransitionPanel from './DataTransitionPanel';
 import DatabaseInspector from './DatabaseInspector';
 import EducationLevelsManager from './EducationLevelsManager';
+import ActivationCodesManager from './ActivationCodesManager';
 import { useDatabase, useStudents, useCandidates } from '../../hooks/useDatabase.js';
 import databaseService, { DOC_TYPES } from '../../services/database-indexeddb.js';
+import activationCodesService from '../../services/activationCodes.js';
 import './AdminDashboard.css';
 
 // Contexto para datos de administración
@@ -457,6 +459,12 @@ function AdminDashboard() {
           >
             📚 Niveles Educativos
           </button>
+          <button 
+            className={activeTab === 'codes' ? 'active' : ''}
+            onClick={() => setActiveTab('codes')}
+          >
+            🔑 Códigos Activación
+          </button>
         </nav>
 
         {/* Content */}
@@ -469,6 +477,7 @@ function AdminDashboard() {
           {activeTab === 'config' && <ConfigTab />}
           {activeTab === 'database' && <DatabaseTab />}
           {activeTab === 'levels' && <EducationLevelsManager />}
+          {activeTab === 'codes' && <ActivationCodesManager />}
         </main>
       </div>
     </AdminContext.Provider>
@@ -1205,6 +1214,7 @@ Esta acción:
 • Eliminará TODOS los estudiantes actuales
 • Eliminará TODOS los votos registrados
 • Eliminará TODOS los candidatos
+• Eliminará TODOS los códigos de activación
 • Reiniciará todas las estadísticas
 • NO se puede deshacer
 
@@ -1220,9 +1230,18 @@ Escriba "CONFIRMAR" para proceder:`;
       try {
         console.log('🗑️ Iniciando limpieza completa para nueva elección...');
         
-        // Step 1: Clear all database collections
+        // Step 0: Clear activation codes using dedicated service
+        console.log('🔑 Eliminando códigos de activación...');
+        const codesResult = await activationCodesService.clearAllCodes();
+        if (codesResult.success) {
+          console.log(`✅ Eliminados ${codesResult.deleted} códigos de activación`);
+        } else {
+          console.warn('⚠️ Error eliminando códigos:', codesResult.error);
+        }
+        
+        // Step 1: Clear all other database collections
         const collections = ['students', 'candidates', 'votes', 'sessions'];
-        let totalDeleted = 0;
+        let totalDeleted = codesResult.deleted || 0;
         
         for (const collection of collections) {
           try {
@@ -1273,9 +1292,17 @@ Escriba "CONFIRMAR" para proceder:`;
         setStudents([]);
         setCandidates([]);
         
-        setSuccess(`✅ Nueva elección iniciada exitosamente. Se eliminaron ${totalDeleted} registros de la base de datos.`);
+        const codesDeleted = codesResult.deleted || 0;
+        const otherDeleted = totalDeleted - codesDeleted;
         
-        console.log(`✅ Nueva elección completada. Total eliminado: ${totalDeleted} registros`);
+        setSuccess(`✅ Nueva elección iniciada exitosamente. 
+        
+Eliminados:
+• ${codesDeleted} códigos de activación
+• ${otherDeleted} registros de datos
+• Total: ${totalDeleted} registros`);
+        
+        console.log(`✅ Nueva elección completada. Códigos: ${codesDeleted}, Otros: ${otherDeleted}, Total: ${totalDeleted}`);
         
       } catch (error) {
         console.error('❌ Error al iniciar nueva elección:', error);

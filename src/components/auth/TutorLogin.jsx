@@ -1,136 +1,53 @@
 // src/components/auth/TutorLogin.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useDatabase } from '../../hooks/useDatabase.js';
-import databaseService from '../../services/database-indexeddb.js';
+import activationCodesService from '../../services/activationCodes.js';
 import './TutorLogin.css';
 
 const TutorLogin = () => {
   const [activationCode, setActivationCode] = useState('');
-  const [selectedCourse, setSelectedCourse] = useState('');
   const [tutorName, setTutorName] = useState('');
-  const [availableCourses, setAvailableCourses] = useState([]);
-  const [databaseCourses, setDatabaseCourses] = useState([]);
+  const [courseInfo, setCourseInfo] = useState(null);  // Info del curso detectado
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validating, setValidating] = useState(false);
   
-  const { login, isOnline, validateActivationCode, getAvailableCourses } = useAuth();
-  const { isReady } = useDatabase();
+  const { isOnline, login } = useAuth();
 
-  // Función simplificada - ya no necesitamos validación compleja
-
-  // Cargar cursos de la base de datos
-  useEffect(() => {
-    const loadDatabaseCourses = async () => {
-      try {
-        console.log('🔍 TutorLogin: Iniciando carga de cursos...');
-        console.log('🔧 TutorLogin: isReady from hook:', isReady);
-        console.log('🔧 TutorLogin: Database service ready:', databaseService.isReady());
-        
-        // Esperar un poco más para asegurar que la BD está lista
-        if (!isReady) {
-          console.log('⏳ TutorLogin: Esperando a que la BD esté lista...');
-          return;
-        }
-        
-        // Intentar múltiples veces si es necesario
-        let attempts = 0;
-        const maxAttempts = 3;
-        
-        while (attempts < maxAttempts) {
-          try {
-            console.log(`🔄 TutorLogin: Intento ${attempts + 1} de ${maxAttempts}`);
-            
-            const result = await databaseService.findDocuments('students', {
-              selector: { type: 'student' }
-            });
-            
-            console.log('📊 TutorLogin: Result from DB:', result);
-            
-            if (result && result.success && result.docs) {
-              const courses = [...new Set(
-                result.docs.map(s => s.curso || s.course).filter(Boolean)
-              )].sort();
-              
-              console.log('📚 TutorLogin: Cursos encontrados en BD:', courses);
-              setDatabaseCourses(courses);
-              return; // Éxito, salir del bucle
-            } else {
-              console.log('⚠️ TutorLogin: Result inválido o sin éxito:', result);
-            }
-          } catch (error) {
-            console.error(`❌ TutorLogin: Error en intento ${attempts + 1}:`, error);
-          }
-          
-          attempts++;
-          if (attempts < maxAttempts) {
-            console.log('⏳ Esperando 1 segundo antes del siguiente intento...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-        
-        console.log('❌ TutorLogin: No se pudieron cargar los cursos después de todos los intentos');
-        setDatabaseCourses([]);
-        
-      } catch (error) {
-        console.error('❌ TutorLogin: Error general al cargar cursos:', error);
-        setDatabaseCourses([]);
-      }
-    };
-    
-    // Esperar un poco antes de ejecutar
-    const timer = setTimeout(() => {
-      loadDatabaseCourses();
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, [isReady]);
-
-  useEffect(() => {
-    console.log('🔄 TutorLogin: Effect triggered - código:', activationCode, 'DB cursos:', databaseCourses.length);
-    
-    if (activationCode.length >= 5) {
-      const validation = validateActivationCode(activationCode);
-      if (validation.valid) {
-        console.log('✅ TutorLogin: Código válido:', activationCode);
-        
-        let finalCourses = [];
-        
-        if (databaseCourses.length > 0) {
-          // Usar TODOS los cursos de BD tal como están importados
-          finalCourses = [...databaseCourses]; // Crear copia para evitar mutaciones
-          console.log('📚 TutorLogin: Usando cursos de BD:', finalCourses);
-        } else {
-          // Fallback a cursos hardcodeados solo si no hay BD
-          const hardcodedCourses = getAvailableCourses(activationCode);
-          finalCourses = [...hardcodedCourses];
-          console.log('📚 TutorLogin: Usando cursos hardcodeados:', finalCourses);
-        }
-        
-        console.log('🎯 TutorLogin: Estableciendo cursos disponibles:', finalCourses);
-        setAvailableCourses(finalCourses);
-        setError('');
-        
-        // Auto-seleccionar si solo hay uno
-        if (finalCourses.length === 1) {
-          setSelectedCourse(finalCourses[0]);
-          console.log('🎯 Auto-seleccionado:', finalCourses[0]);
-        } else {
-          setSelectedCourse(''); // Reset selection
-        }
-      } else {
-        console.log('❌ TutorLogin: Código inválido:', validation.error);
-        setAvailableCourses([]);
-        setSelectedCourse('');
-        setError(validation.error);
-      }
-    } else {
-      console.log('⏳ TutorLogin: Código muy corto');
-      setAvailableCourses([]);
-      setSelectedCourse('');
+  // VALIDACIÓN DINÁMICA de códigos desde BD
+  const validateCode = async (code) => {
+    if (!code || code.length < 8) {
+      setCourseInfo(null);
       setError('');
+      return;
     }
-  }, [activationCode, databaseCourses, validateActivationCode, getAvailableCourses]);
+
+    setValidating(true);
+    setError('');
+    
+    try {
+      const validation = await activationCodesService.validateCode(code);
+      
+      if (validation.valid) {
+        const courseData = validation.data;
+        
+        setCourseInfo({
+          course: courseData.course,
+          level: courseData.level_name || courseData.level,
+          codeData: courseData
+        });
+        setError('');
+      } else {
+        setCourseInfo(null);
+        setError(validation.error || 'Código de activación inválido');
+      }
+    } catch (err) {
+      setCourseInfo(null);
+      setError('Error validando código: ' + err.message);
+    } finally {
+      setValidating(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -140,26 +57,52 @@ const TutorLogin = () => {
       return;
     }
     
-    if (!selectedCourse) {
-      setError('Seleccione un curso');
+    if (!tutorName.trim()) {
+      setError('Ingrese su nombre completo');
+      return;
+    }
+
+    if (!courseInfo) {
+      setError('Código de activación inválido');
       return;
     }
 
     setIsSubmitting(true);
     setError('');
 
-    const result = await login(activationCode.trim(), selectedCourse, tutorName.trim());
-    
-    if (!result.success) {
-      setError(result.error);
+    try {
+      // Marcar código como usado
+      await activationCodesService.markCodeAsUsed(activationCode.trim(), tutorName.trim());
+      
+      // Usar AuthContext para login - esto automáticamente mostrará TutorPanel
+      const loginResult = await login(activationCode.trim(), courseInfo.course, tutorName.trim());
+      
+      if (!loginResult.success) {
+        throw new Error(loginResult.error);
+      }
+      
+      // Login exitoso - AuthContext automáticamente mostrará TutorPanel
+      
+    } catch (err) {
+      console.error('❌ TutorLogin: Error en login:', err);
+      setError('Error al iniciar sesión: ' + err.message);
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    setIsSubmitting(false);
   };
 
   const handleCodeChange = (e) => {
     const value = e.target.value.toUpperCase();
     setActivationCode(value);
+    
+    // Validar automáticamente cuando el código tenga la longitud mínima
+    if (value.length >= 8) {
+      // Validar inmediatamente - sin delay para mejor UX
+      validateCode(value);
+    } else {
+      setCourseInfo(null);
+      setError('');
+    }
   };
 
   const getConnectionStatus = () => {
@@ -188,79 +131,37 @@ const TutorLogin = () => {
               id="activationCode"
               value={activationCode}
               onChange={handleCodeChange}
-              placeholder="ELEC2024-BACH"
-              className={`form-input ${error && !availableCourses.length ? 'error' : ''}`}
+              placeholder="VOTACION-A7X9K"
+              className={`form-input ${error ? 'error' : courseInfo ? 'success' : ''}`}
               maxLength="20"
               autoComplete="off"
             />
+            {validating && (
+              <div className="validation-status">
+                🔄 Validando código...
+              </div>
+            )}
+            {courseInfo && (
+              <div className="course-detected">
+                ✅ <strong>Curso detectado:</strong> {courseInfo.course} ({courseInfo.level})
+              </div>
+            )}
           </div>
 
           <div className="form-group">
             <label htmlFor="tutorName">
-              👤 Nombre del Docente (Opcional):
+              👤 Nombre del Docente (Obligatorio):
             </label>
             <input
               type="text"
               id="tutorName"
               value={tutorName}
               onChange={(e) => setTutorName(e.target.value)}
-              placeholder="Profesor García"
+              placeholder="Profesor Juan García"
               className="form-input"
               maxLength="50"
+              required
             />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="course">
-              🎓 Seleccionar Curso:
-            </label>
-            <select
-              id="course"
-              value={selectedCourse}
-              onChange={(e) => setSelectedCourse(e.target.value)}
-              className={`form-select ${!availableCourses.length ? 'disabled' : ''}`}
-              disabled={!availableCourses.length}
-            >
-              <option value="">
-                {availableCourses.length ? 'Seleccione un curso' : 'Ingrese código válido'}
-              </option>
-              {availableCourses.map(course => (
-                <option key={course} value={course}>
-                  {course}
-                </option>
-              ))}
-            </select>
-            <div className="course-info" style={{ 
-              fontSize: '12px', 
-              color: '#666', 
-              marginTop: '5px'
-            }}>
-              <div style={{ marginBottom: '5px' }}>
-                {databaseCourses.length > 0 ? (
-                  <span>📊 Cursos en BD ({databaseCourses.length}): {databaseCourses.join(', ')}</span>
-                ) : (
-                  <span>⚠️ No se cargaron cursos de BD</span>
-                )}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>🎯 Opciones disponibles: {availableCourses.length}</span>
-                <button 
-                  type="button"
-                  onClick={() => window.location.reload()}
-                  style={{
-                    background: '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    padding: '4px 8px',
-                    borderRadius: '3px',
-                    fontSize: '10px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  🔄 Recargar
-                </button>
-              </div>
-            </div>
           </div>
 
           {error && (
@@ -272,12 +173,14 @@ const TutorLogin = () => {
           <button
             type="submit"
             className="login-button"
-            disabled={!activationCode || !selectedCourse || isSubmitting}
+            disabled={!activationCode || !tutorName || !courseInfo || isSubmitting || validating}
           >
             {isSubmitting ? (
-              <>🔄 Iniciando...</>
+              <>🔄 Iniciando sesión...</>
+            ) : validating ? (
+              <>⏳ Validando código...</>
             ) : (
-              <>🔓 INICIAR VOTACIÓN</>
+              <>🔓 ACCEDER AL PANEL</>
             )}
           </button>
         </form>
@@ -293,13 +196,24 @@ const TutorLogin = () => {
         </div>
 
         <div className="help-section">
-          <h3>📋 Códigos de Prueba:</h3>
-          <ul>
-            <li><strong>ELEC2024-BACH</strong> - Bachillerato</li>
-            <li><strong>ELEC2024-BASICA-SUP</strong> - Básica Superior</li>
-            <li><strong>ELEC2024-BASICA-MEDIA</strong> - Básica Media</li>
-            <li><strong>ELEC2024-BASICA-ELEM</strong> - Básica Elemental</li>
-          </ul>
+          <h3>💡 Instrucciones de Acceso:</h3>
+          <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
+            <p><strong>1.</strong> Solicite su código de activación al administrador</p>
+            <p><strong>2.</strong> Ingrese el código completo (ej: VOTACION-A7X9K)</p>
+            <p><strong>3.</strong> Escriba su nombre completo</p>
+            <p><strong>4.</strong> El sistema detectará automáticamente su curso</p>
+            <p><strong>5.</strong> Accederá directamente al panel de votación</p>
+          </div>
+          <div style={{ 
+            marginTop: '15px', 
+            padding: '10px', 
+            backgroundColor: '#f0f9ff', 
+            borderRadius: '8px',
+            border: '1px solid #bfdbfe'
+          }}>
+            <strong>📞 ¿Problemas con su código?</strong><br/>
+            Contacte al administrador de la elección
+          </div>
         </div>
       </div>
     </div>
