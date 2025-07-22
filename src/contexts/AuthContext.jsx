@@ -1,27 +1,8 @@
 // src/contexts/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import activationCodesService from '../services/activationCodes.js';
 
-const AuthContext = createContext();
-
-// CÓDIGOS DE ACTIVACIÓN ESPECÍFICOS POR CURSO
-// Cada código permite acceso a UN SOLO curso específico
-// Formato: ELEC2024-[IDENTIFICADOR_CURSO]
-const ACTIVATION_CODES = {
-  // BACHILLERATO - Códigos específicos por curso
-  'ELEC2024-1ROBACHA': {
-    level: 'BACHILLERATO',
-    name: 'Bachillerato',
-    course: '1ro Bach A', // UN SOLO CURSO
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-1ROBACHB': {
-    level: 'BACHILLERATO',
-    name: 'Bachillerato',
-    course: '1ro Bach B',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
+const AuthContext = createContext({
   'ELEC2024-2ROBACHA': {
     level: 'BACHILLERATO',
     name: 'Bachillerato',
@@ -36,167 +17,7 @@ const ACTIVATION_CODES = {
     validFrom: '2024-03-15T08:00:00Z',
     validUntil: '2024-03-15T16:00:00Z'
   },
-  'ELEC2024-3ROBACHA': {
-    level: 'BACHILLERATO',
-    name: 'Bachillerato',
-    course: '3ro Bach A',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-3ROBACHB': {
-    level: 'BACHILLERATO',
-    name: 'Bachillerato',
-    course: '3ro Bach B',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-
-  // BÁSICA SUPERIOR - Códigos específicos por curso  
-  'ELEC2024-8VOA': {
-    level: 'BASICA_SUPERIOR',
-    name: 'Básica Superior',
-    course: '8vo A',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-8VOB': {
-    level: 'BASICA_SUPERIOR',
-    name: 'Básica Superior',
-    course: '8vo B',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-9NOA': {
-    level: 'BASICA_SUPERIOR',
-    name: 'Básica Superior',
-    course: '9no A',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-9NOB': {
-    level: 'BASICA_SUPERIOR',
-    name: 'Básica Superior',
-    course: '9no B',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-10MOA': {
-    level: 'BASICA_SUPERIOR',
-    name: 'Básica Superior',
-    course: '10mo A',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-10MOB': {
-    level: 'BASICA_SUPERIOR',
-    name: 'Básica Superior',
-    course: '10mo B',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-
-  // BÁSICA MEDIA - Códigos específicos por curso
-  'ELEC2024-5TOA': {
-    level: 'BASICA_MEDIA',
-    name: 'Básica Media',
-    course: '5to A',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-5TOB': {
-    level: 'BASICA_MEDIA',
-    name: 'Básica Media',
-    course: '5to B',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-6TOA': {
-    level: 'BASICA_MEDIA',
-    name: 'Básica Media',
-    course: '6to A',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-6TOB': {
-    level: 'BASICA_MEDIA',
-    name: 'Básica Media',
-    course: '6to B',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-7MOA': {
-    level: 'BASICA_MEDIA',
-    name: 'Básica Media',
-    course: '7mo A',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-7MOB': {
-    level: 'BASICA_MEDIA',
-    name: 'Básica Media',
-    course: '7mo B',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-
-  // BÁSICA ELEMENTAL - Códigos específicos por curso
-  'ELEC2024-1ROA': {
-    level: 'BASICA_ELEMENTAL',
-    name: 'Básica Elemental',
-    course: '1ro A',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-1ROB': {
-    level: 'BASICA_ELEMENTAL',
-    name: 'Básica Elemental',
-    course: '1ro B',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-2DOA': {
-    level: 'BASICA_ELEMENTAL',
-    name: 'Básica Elemental',
-    course: '2do A',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-2DOB': {
-    level: 'BASICA_ELEMENTAL',
-    name: 'Básica Elemental',
-    course: '2do B',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-3ROA': {
-    level: 'BASICA_ELEMENTAL',
-    name: 'Básica Elemental',
-    course: '3ro A',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-3ROB': {
-    level: 'BASICA_ELEMENTAL',
-    name: 'Básica Elemental',
-    course: '3ro B',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-4TOA': {
-    level: 'BASICA_ELEMENTAL',
-    name: 'Básica Elemental',
-    course: '4to A',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-4TOB': {
-    level: 'BASICA_ELEMENTAL',
-    name: 'Básica Elemental',
-    course: '4to B',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  }
-};
+});
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -205,22 +26,27 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Verificar si hay una sesión guardada
-    const savedSession = localStorage.getItem('voting_session');
-    if (savedSession) {
-      try {
-        const session = JSON.parse(savedSession);
-        // Verificar si la sesión sigue siendo válida
-        if (isValidSession(session)) {
-          setUser(session);
-        } else {
+    const initializeAuth = async () => {
+      const savedSession = localStorage.getItem('voting_session');
+      if (savedSession) {
+        try {
+          const session = JSON.parse(savedSession);
+          // Verificar si la sesión sigue siendo válida
+          const sessionValid = await isValidSession(session);
+          if (sessionValid) {
+            setUser(session);
+          } else {
+            localStorage.removeItem('voting_session');
+          }
+        } catch (error) {
+          console.error('Error al cargar sesión guardada:', error);
           localStorage.removeItem('voting_session');
         }
-      } catch (error) {
-        console.error('Error al cargar sesión guardada:', error);
-        localStorage.removeItem('voting_session');
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    initializeAuth();
 
     // Escuchar cambios de conexión
     const handleOnline = () => setIsOnline(true);
@@ -235,47 +61,26 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const isValidSession = (session) => {
+  const isValidSession = async (session) => {
     if (!session || !session.activationCode || !session.course) return false;
     
-    const codeData = ACTIVATION_CODES[session.activationCode];
-    if (!codeData) return false;
-
-    // Verificar si el código está dentro del horario válido
-    const now = new Date();
-    const validFrom = new Date(codeData.validFrom);
-    const validUntil = new Date(codeData.validUntil);
-
-    // Para desarrollo, permitir uso fuera del horario
-    // En producción, descomentar la siguiente línea:
-    // return now >= validFrom && now <= validUntil;
-    
-    return true; // Permitir acceso para desarrollo
+    try {
+      const validationResult = await activationCodesService.validateCode(session.activationCode);
+      return validationResult.valid;
+    } catch (error) {
+      console.error('Error validating session:', error);
+      return false;
+    }
   };
 
-  const validateActivationCode = (code) => {
-    const codeData = ACTIVATION_CODES[code];
-    if (!codeData) {
-      return { valid: false, error: 'Código de activación inválido' };
+  const validateActivationCode = async (code) => {
+    try {
+      const result = await activationCodesService.validateCode(code);
+      return result;
+    } catch (error) {
+      console.error('Error validating activation code:', error);
+      return { valid: false, error: 'Error validando código de activación' };
     }
-
-    const now = new Date();
-    const validFrom = new Date(codeData.validFrom);
-    const validUntil = new Date(codeData.validUntil);
-
-    // Para desarrollo, saltar validación de tiempo
-    // En producción, activar estas validaciones:
-    /*
-    if (now < validFrom) {
-      return { valid: false, error: 'El código aún no está activo' };
-    }
-    
-    if (now > validUntil) {
-      return { valid: false, error: 'El código ha expirado' };
-    }
-    */
-
-    return { valid: true, data: codeData };
   };
 
   const validateCourseForLevel = (course, level) => {
@@ -405,10 +210,15 @@ export const AuthProvider = ({ children }) => {
     return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   };
 
-  const getAvailableCourses = (activationCode) => {
-    // Con códigos específicos, cada código tiene UN SOLO curso
-    const codeData = ACTIVATION_CODES[activationCode];
-    return codeData ? [codeData.course] : [];
+  const getAvailableCourses = async (activationCode) => {
+    // With dynamic codes, each code has one specific course
+    try {
+      const validation = await activationCodesService.validateCode(activationCode);
+      return validation.valid && validation.data ? [validation.data.course] : [];
+    } catch (error) {
+      console.error('Error getting available courses:', error);
+      return [];
+    }
   };
 
   const value = {
@@ -420,7 +230,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     validateActivationCode,
     getAvailableCourses,
-    activationCodes: ACTIVATION_CODES
+    activationCodesService
   };
 
   return (

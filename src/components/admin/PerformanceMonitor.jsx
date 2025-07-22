@@ -94,36 +94,6 @@ const PerformanceMonitor = () => {
     return students;
   };
 
-  /**
-   * Generate mock candidates
-   */
-  const generateMockCandidates = () => {
-    const levels = ['BACHILLERATO', 'BASICA_SUPERIOR'];
-    const cargos = ['PRESIDENTE', 'VICEPRESIDENTE'];
-    const nombres = ['Andrea', 'Roberto', 'Sofía', 'Daniel', 'Valentina', 'Sebastián'];
-    const apellidos = ['Morales', 'Jiménez', 'Vargas', 'Herrera', 'Castro', 'Delgado'];
-    
-    const candidates = [];
-    
-    levels.forEach(level => {
-      cargos.forEach(cargo => {
-        for (let i = 0; i < 3; i++) { // 3 candidates per position per level
-          candidates.push({
-            nombre: nombres[Math.floor(Math.random() * nombres.length)],
-            apellidos: apellidos[Math.floor(Math.random() * apellidos.length)],
-            cargo: cargo,
-            level: level,
-            ticketId: `Lista ${['Azul', 'Roja', 'Verde'][i]}`,
-            foto: '',
-            propuestas: `Propuesta ${i + 1} para ${cargo}`,
-            votos: 0
-          });
-        }
-      });
-    });
-    
-    return candidates;
-  };
 
   /**
    * Run performance test with specified number of students
@@ -153,7 +123,6 @@ const PerformanceMonitor = () => {
       
       console.log(`🧪 Starting performance test with ${studentCount} students...`);
       const students = generateMockStudents(studentCount);
-      const candidates = generateMockCandidates();
       
       testResult.phases.push({
         name: 'Data Generation',
@@ -179,22 +148,8 @@ const PerformanceMonitor = () => {
         throw new Error('Failed to insert students');
       }
 
-      // Phase 3: Bulk insert candidates
+      // Phase 3: Query performance test
       setTestProgress(50);
-      const candidatesStartTime = performance.now();
-      
-      const candidatesResult = await databaseService.bulkCreate('candidates', candidates, 'candidate');
-      const candidatesTime = performance.now() - candidatesStartTime;
-      
-      testResult.phases.push({
-        name: 'Candidates Insert',
-        time: candidatesTime,
-        success: candidatesResult.success,
-        count: candidatesResult.successful
-      });
-
-      // Phase 4: Query performance test
-      setTestProgress(70);
       const queryStartTime = performance.now();
       
       // Test various query patterns
@@ -211,10 +166,6 @@ const PerformanceMonitor = () => {
         }),
         // Search students by name
         () => databaseService.searchDocuments('students', 'Ana', ['nombre', 'apellidos']),
-        // Find all candidates
-        () => databaseService.findDocuments('candidates', {
-          selector: { type: 'candidate' }
-        })
       ];
 
       const queryResults = [];
@@ -246,7 +197,7 @@ const PerformanceMonitor = () => {
         queryCount: queryResults.length
       });
 
-      // Phase 5: Memory and performance metrics
+      // Phase 4: Memory and performance metrics
       setTestProgress(90);
       const finalStats = await getStats();
       
@@ -292,23 +243,14 @@ const PerformanceMonitor = () => {
     try {
       setIsRunningTest(true);
       
-      // Clear students and candidates
+      // Clear students
       const studentsResult = await databaseService.findDocuments('students', {
         selector: { type: 'student' }
-      });
-      
-      const candidatesResult = await databaseService.findDocuments('candidates', {
-        selector: { type: 'candidate' }
       });
 
       // Delete all students
       for (const student of studentsResult.docs || []) {
         await databaseService.deleteDocument('students', student._id, student._rev);
-      }
-
-      // Delete all candidates
-      for (const candidate of candidatesResult.docs || []) {
-        await databaseService.deleteDocument('candidates', candidate._id, candidate._rev);
       }
 
       await loadStats();

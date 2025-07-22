@@ -61,9 +61,9 @@ function AdminDashboard() {
       // Always use database data (including empty array) when database is ready
       setStudents(dbStudents);
       
-      // If database is empty, offer to load mock data for development
+      // Database is ready for real student data
       if (dbStudents.length === 0) {
-        console.log('📊 Database is empty. Use "Reset a Mock" in Transition tab to load test data if needed.');
+        console.log('📊 Database is empty. Import real student data to begin.');
       }
     }
   }, [isReady, studentsLoading, dbStudents]);
@@ -74,9 +74,9 @@ function AdminDashboard() {
       // Always use database data (including empty array) when database is ready
       setCandidates(dbCandidates);
       
-      // If database is empty, offer to load mock data for development
+      // Database is ready for electoral lists
       if (dbCandidates.length === 0) {
-        console.log('🏆 Database is empty. Use "Reset a Mock" in Transition tab to load test data if needed.');
+        console.log('🏆 Database is empty. Create electoral lists to begin voting.');
       }
     }
   }, [isReady, candidatesLoading, dbCandidates]);

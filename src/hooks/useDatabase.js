@@ -49,7 +49,7 @@ export function useDatabase() {
   }, [])
 
   /**
-   * Mock migration function for compatibility
+   * Migration function (no-op for IndexedDB)
    */
   const performMigration = useCallback(async () => {
     console.log('Migration not needed in simplified version')

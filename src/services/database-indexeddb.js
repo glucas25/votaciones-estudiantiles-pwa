@@ -596,7 +596,7 @@ class IndexedDBService {
   }
 
   /**
-   * Mock functions for compatibility
+   * Clear cache utility
    */
   clearAllCache() {
     console.log('🧹 Cache cleared (IndexedDB version)')

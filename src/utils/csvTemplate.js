@@ -11,110 +11,78 @@ export const TEMPLATE_HEADERS = [
   'año'
 ];
 
-// Sample data for different education levels
+// Generic sample data for different education levels (placeholder format)
 const SAMPLE_DATA = {
   BASICA_ELEMENTAL: [
     {
-      cedula: '1234567890',
-      nombres: 'Ana María',
-      apellidos: 'González Pérez',
+      cedula: '0000000001',
+      nombres: 'Nombre1',
+      apellidos: 'Apellido1 Apellido2',
       curso: '1ro A',
       nivel: 'BASICA_ELEMENTAL',
-      año: 2024
+      año: new Date().getFullYear()
     },
     {
-      cedula: '1234567891',
-      nombres: 'Carlos Eduardo',
-      apellidos: 'Martínez Silva',
+      cedula: '0000000002',
+      nombres: 'Nombre2',
+      apellidos: 'Apellido1 Apellido2',
       curso: '2do A',
       nivel: 'BASICA_ELEMENTAL', 
-      año: 2024
-    },
-    {
-      cedula: '1234567892',
-      nombres: 'María José',
-      apellidos: 'López Torres',
-      curso: '3ro B',
-      nivel: 'BASICA_ELEMENTAL',
-      año: 2024
+      año: new Date().getFullYear()
     }
   ],
   BASICA_MEDIA: [
     {
-      cedula: '1234567893',
-      nombres: 'Diego Fernando',
-      apellidos: 'Rodríguez Vega',
+      cedula: '0000000003',
+      nombres: 'Nombre3',
+      apellidos: 'Apellido1 Apellido2',
       curso: '5to A',
       nivel: 'BASICA_MEDIA',
-      año: 2024
+      año: new Date().getFullYear()
     },
     {
-      cedula: '1234567894',
-      nombres: 'Isabella Sofia',
-      apellidos: 'Castro Morales',
+      cedula: '0000000004',
+      nombres: 'Nombre4',
+      apellidos: 'Apellido1 Apellido2',
       curso: '6to B',
       nivel: 'BASICA_MEDIA',
-      año: 2024
-    },
-    {
-      cedula: '1234567895',
-      nombres: 'Sebastián David',
-      apellidos: 'Herrera Luna',
-      curso: '7mo A',
-      nivel: 'BASICA_MEDIA',
-      año: 2024
+      año: new Date().getFullYear()
     }
   ],
   BASICA_SUPERIOR: [
     {
-      cedula: '1234567896',
-      nombres: 'Valentina Andrea',
-      apellidos: 'Vargas Ruiz',
+      cedula: '0000000005',
+      nombres: 'Nombre5',
+      apellidos: 'Apellido1 Apellido2',
       curso: '8vo A',
       nivel: 'BASICA_SUPERIOR',
-      año: 2024
+      año: new Date().getFullYear()
     },
     {
-      cedula: '1234567897',
-      nombres: 'Mateo Alejandro',
-      apellidos: 'Jiménez Castro',
+      cedula: '0000000006',
+      nombres: 'Nombre6',
+      apellidos: 'Apellido1 Apellido2',
       curso: '9no B',
       nivel: 'BASICA_SUPERIOR',
-      año: 2024
-    },
-    {
-      cedula: '1234567898',
-      nombres: 'Camila Fernanda',
-      apellidos: 'Mendoza Vargas',
-      curso: '10mo A',
-      nivel: 'BASICA_SUPERIOR',
-      año: 2024
+      año: new Date().getFullYear()
     }
   ],
   BACHILLERATO: [
     {
-      cedula: '1234567899',
-      nombres: 'Andrés Felipe',
-      apellidos: 'Paredes Silva',
+      cedula: '0000000007',
+      nombres: 'Nombre7',
+      apellidos: 'Apellido1 Apellido2',
       curso: '1ro Bach A',
       nivel: 'BACHILLERATO',
-      año: 2024
+      año: new Date().getFullYear()
     },
     {
-      cedula: '1234567800',
-      nombres: 'Sofía Elena',
-      apellidos: 'Guerrero Torres',
+      cedula: '0000000008',
+      nombres: 'Nombre8',
+      apellidos: 'Apellido1 Apellido2',
       curso: '2do Bach B',
       nivel: 'BACHILLERATO',
-      año: 2024
-    },
-    {
-      cedula: '1234567801',
-      nombres: 'Kevin Andrés',
-      apellidos: 'Molina Espinoza',
-      curso: '3ro Bach A',
-      nivel: 'BACHILLERATO',
-      año: 2024
+      año: new Date().getFullYear()
     }
   ]
 };
