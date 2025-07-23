@@ -2,22 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import activationCodesService from '../services/activationCodes.js';
 
-const AuthContext = createContext({
-  'ELEC2024-2ROBACHA': {
-    level: 'BACHILLERATO',
-    name: 'Bachillerato',
-    course: '2do Bach A',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-  'ELEC2024-2ROBACHB': {
-    level: 'BACHILLERATO',
-    name: 'Bachillerato',
-    course: '2do Bach B',
-    validFrom: '2024-03-15T08:00:00Z',
-    validUntil: '2024-03-15T16:00:00Z'
-  },
-});
+const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);

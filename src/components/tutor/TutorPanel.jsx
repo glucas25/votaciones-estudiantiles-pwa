@@ -19,33 +19,19 @@ const TutorPanel = () => {
     getStats,
     markStudentAsVoted,
     loading,
+    dataReady,
     error,
     isReady,
-    totalStudentsInDB
+    totalStudentsInDB,
+    studentStates,
+    resetStudentStatesForNewElection
   } = useStudents();
 
   const [activeSection, setActiveSection] = useState('pending'); // pending, voted, absent
   const [votingStudent, setVotingStudent] = useState(null); // Estudiante en proceso de votación
   
-  // Debug info
-  console.log('🎭 TutorPanel Debug:', {
-    userCourse: user?.course,
-    studentsCount: students?.length || 0,
-    totalInDB: totalStudentsInDB,
-    loading,
-    error,
-    isReady
-  });
-  
-  const stats = getStats();
-  const { pending, voted, absent } = getStudentsByStatus();
-  
-  console.log('📊 TutorPanel Stats:', {
-    stats,
-    pending: pending?.length || 0,
-    voted: voted?.length || 0,
-    absent: absent?.length || 0
-  });
+  const stats = getStats;
+  const { pending, voted, absent } = getStudentsByStatus;
 
   const handleStartVoting = (student) => {
     setVotingStudent(student);
@@ -56,7 +42,8 @@ const TutorPanel = () => {
   };
 
   const handleVoteComplete = (studentId) => {
-    markStudentAsVoted(studentId);
+    // Student is already marked as voted in VoteConfirmation
+    // Just close the voting booth
     setVotingStudent(null);
   };
 
@@ -87,8 +74,30 @@ const TutorPanel = () => {
       }
     };
     
-    console.log('📊 Reporte generado:', report);
     alert('📊 Reporte generado en consola (F12)');
+  };
+
+  const handleResetStudentStates = async () => {
+    const confirmMessage = `¿Estás seguro de que quieres REINICIAR todos los estados de votación?\n\n` +
+                          `Esto hará que todos los estudiantes vuelvan a estado "PENDIENTE":\n` +
+                          `• ${voted.length} estudiantes que votaron → PENDIENTE\n` +
+                          `• ${absent.length} estudiantes ausentes → PENDIENTE\n` +
+                          `• Los votos registrados NO se eliminarán\n\n` +
+                          `Esta acción NO se puede deshacer.`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      const result = await resetStudentStatesForNewElection();
+      if (result.success) {
+        alert(`✅ Estados reiniciados exitosamente\n\n${result.count} estudiantes regresaron a estado PENDIENTE`);
+      }
+    } catch (error) {
+      console.error('Error resetting student states:', error);
+      alert('❌ Error al reiniciar estados. Ver consola para detalles.');
+    }
   };
 
   const handleBackup = () => {
@@ -117,6 +126,21 @@ const TutorPanel = () => {
       minute: '2-digit'
     });
   };
+
+  // Mostrar loading si los datos no están completamente listos
+  if (!dataReady || loading) {
+    return (
+      <div className="tutor-panel">
+        <div className="tutor-panel-header">
+          <h2>🎓 Panel del Tutor - {user.course}</h2>
+        </div>
+        <div style={{ textAlign: 'center', padding: '2rem' }}>
+          <div className="loading-spinner">⏳ Cargando datos completos...</div>
+          <p>Sincronizando estudiantes y estados de votación</p>
+        </div>
+      </div>
+    );
+  }
 
   // Si hay un estudiante votando, mostrar solo la interfaz de votación
   if (votingStudent) {
@@ -249,6 +273,9 @@ const TutorPanel = () => {
         </button>
         <button onClick={handleBackup} className="action-btn backup-btn">
           💾 BACKUP
+        </button>
+        <button onClick={handleResetStudentStates} className="action-btn reset-btn" title="Reiniciar estados de votación de todos los estudiantes">
+          🔄 REINICIAR ESTADOS
         </button>
         <button onClick={handleSyncData} className="action-btn sync-btn">
           🔄 SYNC

@@ -6,7 +6,7 @@ import databaseService, { DOC_TYPES } from '../../services/database-indexeddb.js
 import './CandidateListManager.css';
 
 const CandidateListManager = () => {
-  const { candidates, setCandidates, students } = useContext(AdminContext);
+  const { candidates, setCandidates, students, refetchCandidates } = useContext(AdminContext);
   const [showForm, setShowForm] = useState(false);
   const [editingList, setEditingList] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -36,7 +36,8 @@ const CandidateListManager = () => {
           const result = await databaseService.deleteDocument('candidates', dbId, rev);
           
           if (result.success) {
-            setCandidates(candidates.filter(c => (c.id || c._id) !== listId));
+            // Refetch from database to ensure sync
+            await refetchCandidates();
             setSuccess('✅ Lista eliminada exitosamente');
             setTimeout(() => setSuccess(null), 3000);
           } else {
@@ -121,12 +122,8 @@ const CandidateListManager = () => {
                   );
                   
                   if (result.success) {
-                    const updatedLists = candidates.map(c => 
-                      (c.id || c._id) === (editingList.id || editingList._id) 
-                        ? { ...listData, _id: result.id, _rev: result.rev }
-                        : c
-                    );
-                    setCandidates(updatedLists);
+                    // Refetch from database to ensure sync
+                    await refetchCandidates();
                     setSuccess('✅ Lista actualizada exitosamente');
                   } else {
                     throw new Error(result.error || 'Error al actualizar lista');
@@ -156,12 +153,8 @@ const CandidateListManager = () => {
                 );
                 
                 if (result.success) {
-                  const newList = {
-                    ...newListData,
-                    _id: result.id,
-                    _rev: result.rev
-                  };
-                  setCandidates([...candidates, newList]);
+                  // Refetch from database to ensure sync
+                  await refetchCandidates();
                   setSuccess('✅ Lista creada exitosamente');
                 } else {
                   // Fallback to local storage

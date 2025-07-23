@@ -9,7 +9,7 @@ import './VotingBooth.css';
 
 const VotingBooth = ({ student, onClose, onVoteComplete }) => {
   const { user } = useAuth();
-  const { hasVoted, getAvailableCargos, candidates, loading, error } = useCandidates();
+  const { hasVotedSync, getAvailableCargos, candidates, loading, error } = useCandidates();
   const [currentStep, setCurrentStep] = useState('voting'); // voting, confirmation, completed
   const [startTime] = useState(new Date());
 
@@ -18,10 +18,10 @@ const VotingBooth = ({ student, onClose, onVoteComplete }) => {
 
   // Verificar si el estudiante ya votó
   useEffect(() => {
-    if (hasVoted(student.id)) {
+    if (hasVotedSync(student.id)) {
       setCurrentStep('completed');
     }
-  }, [student.id, hasVoted]);
+  }, [student.id, hasVotedSync]);
 
   const handleVoteSubmission = () => {
     setCurrentStep('confirmation');

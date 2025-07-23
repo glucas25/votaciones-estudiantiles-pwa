@@ -324,14 +324,16 @@ export function useCandidates() {
   const [error, setError] = useState(null)
 
   /**
-   * Load all candidates
+   * Load all candidates (including electoral lists)
    */
   const loadCandidates = useCallback(async (filters = {}) => {
+    console.log('🏆 useCandidates: loadCandidates called with filters:', filters);
     setLoading(true)
     setError(null)
     
     try {
-      const query = {
+      // Load both candidate types and lists
+      const candidateQuery = {
         selector: {
           type: DOC_TYPES.CANDIDATE,
           ...filters
@@ -339,10 +341,41 @@ export function useCandidates() {
         sort: ['level', 'cargo', 'nombre']
       }
 
-      const result = await databaseService.findDocuments('candidates', query)
-      setCandidates(result.docs || [])
+      const listQuery = {
+        selector: {
+          type: DOC_TYPES.LIST,
+          ...filters
+        },
+        sort: ['listName']
+      }
+
+      console.log('🔍 useCandidates: Executing candidate query:', candidateQuery);
+      console.log('🔍 useCandidates: Executing list query:', listQuery);
+
+      // Execute both queries
+      const [candidateResult, listResult] = await Promise.all([
+        databaseService.findDocuments('candidates', candidateQuery),
+        databaseService.findDocuments('candidates', listQuery)
+      ])
+
+      // Combine results
+      const allCandidates = [
+        ...(candidateResult.docs || []),
+        ...(listResult.docs || [])
+      ]
+
+      console.log('📊 useCandidates: Combined results:', {
+        candidatesCount: candidateResult.docs?.length || 0,
+        listsCount: listResult.docs?.length || 0,
+        totalCount: allCandidates.length,
+        candidateSuccess: candidateResult.success,
+        listSuccess: listResult.success
+      });
+
+      setCandidates(allCandidates)
       
     } catch (err) {
+      console.error('❌ useCandidates: Error loading candidates:', err);
       setError(err.message)
       setCandidates([])
     } finally {
@@ -442,6 +475,7 @@ export function useVotes() {
    * Load votes with filters
    */
   const loadVotes = useCallback(async (filters = {}) => {
+    console.log('🗳️ useVotes: loadVotes called with filters:', filters);
     setLoading(true)
     setError(null)
     
@@ -454,10 +488,18 @@ export function useVotes() {
         sort: [{ timestamp: 'desc' }]
       }
 
+      console.log('🔍 useVotes: Executing query:', query);
       const result = await databaseService.findDocuments('votes', query)
+      console.log('📊 useVotes: Query result:', {
+        docsCount: result.docs?.length || 0,
+        success: result.success,
+        error: result.error,
+        firstVote: result.docs?.[0]
+      });
       setVotes(result.docs || [])
       
     } catch (err) {
+      console.error('❌ useVotes: Error loading votes:', err);
       setError(err.message)
       setVotes([])
     } finally {
@@ -522,6 +564,12 @@ export function useVotes() {
       throw error
     }
   }, [])
+
+  // Load votes on mount
+  useEffect(() => {
+    console.log('🎆 useVotes hook: Loading votes on mount');
+    loadVotes();
+  }, [loadVotes])
 
   return {
     votes,

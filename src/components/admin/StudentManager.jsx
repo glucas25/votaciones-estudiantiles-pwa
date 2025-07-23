@@ -1,16 +1,37 @@
 // src/components/admin/StudentManager.jsx
-// Complete student management component with pagination, search, and virtualization
+// Performance optimized student management component with virtualization for 1000+ students
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import StudentImport from './StudentImport';
 import { generateCSVContent } from '../../utils/csvTemplate';
 import { validateStudent } from '../../utils/studentValidation';
+import performanceMonitor from '../../utils/performanceMonitor';
+import smartCache from '../../utils/smartCache';
 import './StudentManager.css';
 
 const ITEMS_PER_PAGE = 50;
 const ROW_HEIGHT = 80;
 const LIST_HEIGHT = 600;
+const SEARCH_DEBOUNCE_DELAY = 200; // 200ms optimized debounce
+
+// Custom hook for optimized debounce
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  const timerRef = useRef();
+
+  useEffect(() => {
+    timerRef.current = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(timerRef.current);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
 
 const StudentManager = ({ 
   students = [], 
@@ -30,36 +51,69 @@ const StudentManager = ({
   const [selectedStudents, setSelectedStudents] = useState(new Set());
   const [editingStudent, setEditingStudent] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  
+  // Performance optimization refs
+  const searchTimerRef = useRef();
+  const lastSearchResults = useRef(new Map());
+  
+  // Debounced search term for performance
+  const debouncedSearchTerm = useDebounce(searchTerm, SEARCH_DEBOUNCE_DELAY);
 
-  // Filter and sort students
+  // Optimized filter and sort students with performance monitoring
   const filteredAndSortedStudents = useMemo(() => {
-    console.log('🔍 StudentManager - Processing students:', students);
+    const timer = performanceMonitor?.measureStudentSearch();
+    
+    console.log('🔍 StudentManager - Processing students:', students.length, 'students');
+    console.log('🔍 StudentManager - Filters:', { levelFilter, statusFilter, searchTerm: debouncedSearchTerm });
+    
+    // Generate cache key for this filter combination
+    const cacheKey = `${debouncedSearchTerm}-${levelFilter}-${statusFilter}-${sortBy}-${sortOrder}`;
+    
+    // Try to get from cache first
+    const cached = smartCache.getSearchResults(cacheKey, 'students');
+    if (cached && cached.length > 0) {
+      console.log('🎯 Using cached search results:', cached.length, 'students');
+      timer?.end({ cached: true, resultCount: cached.length });
+      return cached;
+    }
+    
     let filtered = [...students];
 
-    // Search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(student => 
-        student.nombres?.toLowerCase().includes(term) ||
-        student.apellidos?.toLowerCase().includes(term) ||
-        student.cedula?.includes(term) ||
-        student.curso?.toLowerCase().includes(term) ||
-        `${student.nombres} ${student.apellidos}`.toLowerCase().includes(term)
-      );
+    // Optimized search filter with early termination
+    if (debouncedSearchTerm) {
+      const term = debouncedSearchTerm.toLowerCase();
+      const searchWords = term.split(' ').filter(w => w.length > 0);
+      
+      filtered = filtered.filter(student => {
+        // Create searchable text once per student
+        const searchableText = `${student.nombres || ''} ${student.apellidos || ''} ${student.cedula || ''} ${student.curso || ''}`.toLowerCase();
+        
+        // All search words must be found (AND logic)
+        return searchWords.every(word => searchableText.includes(word));
+      });
+      
+      console.log('🔍 After optimized search filter:', filtered.length, 'students');
     }
 
-    // Level filter
+    // Optimized level filter
     if (levelFilter !== 'ALL') {
-      filtered = filtered.filter(student => student.nivel === levelFilter);
+      filtered = filtered.filter(student => 
+        student.nivel === levelFilter || student.level === levelFilter
+      );
+      console.log('🔍 After level filter:', filtered.length, 'students');
     }
 
-    // Status filter
+    // Optimized status filter
     if (statusFilter !== 'ALL') {
-      filtered = filtered.filter(student => student.status === statusFilter);
+      filtered = filtered.filter(student => {
+        const studentStatus = student.status || 'pending';
+        return studentStatus === statusFilter;
+      });
+      console.log('🔍 After status filter:', filtered.length, 'students');
     }
 
-    // Sort
-    filtered.sort((a, b) => {
+    // Optimized sort with memoized comparison function
+    const sortComparator = useCallback((a, b) => {
       let aValue = a[sortBy] || '';
       let bValue = b[sortBy] || '';
       
@@ -71,10 +125,16 @@ const StudentManager = ({
       if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
       if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
       return 0;
-    });
+    }, [sortBy, sortOrder]);
 
+    filtered.sort(sortComparator);
+
+    // Cache the result for future use
+    smartCache.cacheSearchResults(cacheKey, filtered, 'students');
+    
+    timer?.end({ cached: false, resultCount: filtered.length });
     return filtered;
-  }, [students, searchTerm, levelFilter, statusFilter, sortBy, sortOrder]);
+  }, [students, debouncedSearchTerm, levelFilter, statusFilter, sortBy, sortOrder]);
 
   // Pagination
   const totalPages = Math.ceil(filteredAndSortedStudents.length / ITEMS_PER_PAGE);
@@ -89,8 +149,12 @@ const StudentManager = ({
     const statusCounts = {};
     
     students.forEach(student => {
-      levelCounts[student.nivel] = (levelCounts[student.nivel] || 0) + 1;
-      statusCounts[student.status || 'pending'] = (statusCounts[student.status || 'pending'] || 0) + 1;
+      // Count both 'nivel' and 'level' fields for compatibility
+      const level = student.nivel || student.level || 'Sin nivel';
+      levelCounts[level] = (levelCounts[level] || 0) + 1;
+      
+      const status = student.status || 'pending';
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
     });
 
     return {
@@ -100,6 +164,41 @@ const StudentManager = ({
       statusCounts
     };
   }, [students, filteredAndSortedStudents]);
+
+  // Debug function for analyzing filter issues
+  const debugFilters = () => {
+    console.log('🔍 STUDENT MANAGER DEBUG:');
+    console.log('Total students:', students.length);
+    console.log('Current filters:', { levelFilter, statusFilter, searchTerm });
+    
+    if (students.length > 0) {
+      console.log('Sample students (first 3):');
+      students.slice(0, 3).forEach((student, index) => {
+        console.log(`Student ${index + 1}:`, {
+          id: student._id || student.id,
+          nombre: student.nombres,
+          apellidos: student.apellidos,
+          nivel: student.nivel,
+          status: student.status,
+          curso: student.curso
+        });
+      });
+      
+      console.log('Unique levels (nivel field):', [...new Set(students.map(s => s.nivel))]);
+      console.log('Unique levels (level field):', [...new Set(students.map(s => s.level))]);
+      console.log('Unique statuses:', [...new Set(students.map(s => s.status || 'pending'))]);
+      console.log('Students without nivel:', students.filter(s => !s.nivel).length);
+      console.log('Students without level:', students.filter(s => !s.level).length);
+      console.log('Students without status:', students.filter(s => !s.status).length);
+    }
+    
+    console.log('Filtered results:', filteredAndSortedStudents.length);
+  };
+
+  // Add debug function to window for manual testing
+  useEffect(() => {
+    window.debugStudentFilters = debugFilters;
+  }, [students, filteredAndSortedStudents, levelFilter, statusFilter, searchTerm]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -179,10 +278,31 @@ const StudentManager = ({
     setView('list');
   };
 
-  // Student row component for virtualized list
+  // Optimized student row component for virtualized list
   const StudentRow = React.memo(({ index, style }) => {
     const student = paginatedStudents[index];
     if (!student) return null;
+
+    // Pre-compute values for better performance
+    const studentId = student.id || student._id || student.cedula;
+    const isSelected = selectedStudents.has(studentId);
+    const status = student.status || 'pending';
+    const nivel = student.nivel || student.level || '';
+    const levelClass = `student-level level-${nivel.toLowerCase()}`;
+    const statusClass = `student-status status-${status}`;
+
+    // Memoized event handlers to prevent unnecessary re-renders
+    const handleSelectChange = useCallback(() => {
+      handleSelectStudent(studentId);
+    }, [studentId]);
+
+    const handleEditClick = useCallback(() => {
+      setEditingStudent(student);
+    }, [student]);
+
+    const handleDeleteClick = useCallback(() => {
+      setShowDeleteConfirm(student);
+    }, [student]);
 
     return (
       <div style={style} className="student-row">
@@ -190,8 +310,9 @@ const StudentManager = ({
           <div className="student-checkbox">
             <input
               type="checkbox"
-              checked={selectedStudents.has(student.id)}
-              onChange={() => handleSelectStudent(student.id)}
+              checked={isSelected}
+              onChange={handleSelectChange}
+              aria-label={`Seleccionar ${student.nombres} ${student.apellidos}`}
             />
           </div>
           
@@ -199,40 +320,65 @@ const StudentManager = ({
             <strong>{student.apellidos}, {student.nombres}</strong>
           </div>
           
-          <div className="student-id">
+          <div className="student-id" title={`Cédula: ${student.cedula}`}>
             {student.cedula}
           </div>
           
-          <div className="student-course">
+          <div className="student-course" title={`Curso: ${student.curso}`}>
             {student.curso}
           </div>
           
-          <div className={`student-level level-${student.nivel?.toLowerCase()}`}>
-            {student.nivel}
+          <div className={levelClass} title={`Nivel: ${nivel}`}>
+            {nivel}
           </div>
           
-          <div className={`student-status status-${student.status || 'pending'}`}>
-            {student.status || 'pending'}
+          <div className={statusClass} title={`Estado: ${status}`}>
+            {status === 'pending' && '⏳'}
+            {status === 'voted' && '✅'}
+            {status === 'absent' && '❌'}
+            <span className="status-text">{status}</span>
           </div>
 
           <div className="student-actions">
             <button 
-              onClick={() => setEditingStudent(student)}
+              onClick={handleEditClick}
               className="btn-edit"
-              title="Editar estudiante"
+              title={`Editar ${student.nombres} ${student.apellidos}`}
+              aria-label={`Editar estudiante ${student.nombres} ${student.apellidos}`}
             >
               ✏️
             </button>
             <button 
-              onClick={() => setShowDeleteConfirm(student)}
+              onClick={handleDeleteClick}
               className="btn-delete"
-              title="Eliminar estudiante"
+              title={`Eliminar ${student.nombres} ${student.apellidos}`}
+              aria-label={`Eliminar estudiante ${student.nombres} ${student.apellidos}`}
             >
               🗑️
             </button>
           </div>
         </div>
       </div>
+    );
+  }, (prevProps, nextProps) => {
+    // Custom comparison for React.memo to prevent unnecessary re-renders
+    const prevStudent = prevProps.paginatedStudents?.[prevProps.index];
+    const nextStudent = nextProps.paginatedStudents?.[nextProps.index];
+    
+    if (!prevStudent && !nextStudent) return true;
+    if (!prevStudent || !nextStudent) return false;
+    
+    // Compare key fields that affect rendering
+    return (
+      prevStudent._id === nextStudent._id &&
+      prevStudent.nombres === nextStudent.nombres &&
+      prevStudent.apellidos === nextStudent.apellidos &&
+      prevStudent.cedula === nextStudent.cedula &&
+      prevStudent.curso === nextStudent.curso &&
+      prevStudent.nivel === nextStudent.nivel &&
+      prevStudent.status === nextStudent.status &&
+      prevProps.style?.height === nextProps.style?.height &&
+      prevProps.style?.top === nextProps.style?.top
     );
   });
 
@@ -348,6 +494,21 @@ const StudentManager = ({
             <option value="curso-asc">🎓 Curso A-Z</option>
             <option value="cedula-asc">🆔 Cédula</option>
           </select>
+
+          <button
+            onClick={() => {
+              setSearchTerm('');
+              setLevelFilter('ALL');
+              setStatusFilter('ALL');
+              setSortBy('apellidos');
+              setSortOrder('asc');
+              setCurrentPage(1);
+            }}
+            className="btn-reset-filters"
+            title="Restablecer todos los filtros"
+          >
+            🔄 Reset
+          </button>
         </div>
       </div>
 

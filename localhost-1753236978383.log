@@ -1,0 +1,171 @@
+ 🛠️ Funciones de debug disponibles:
+ - debugDatabase() - Verificar contenido de la BD
+ - clearDatabase() - Limpiar la BD completamente
+ Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+ 🔧 Initializing IndexedDB service...
+ 🚀 Opening IndexedDB database...
+ ✅ IndexedDB database opened successfully
+ 🔍 Migration needed: false
+ ℹ️ No migration needed
+ 🔍 Migration needed: false
+ ℹ️ No migration needed
+ 📊 ResultsCharts: Vote calculation: Object
+ 📊 ResultsCharts: Vote calculation: Object
+ 🎆 useStudents hook: Loading students on mount
+ 📚 useStudents: loadStudents called with filters: Object
+ 🔍 useStudents: Executing query: Object
+ 🏆 useCandidates: loadCandidates called with filters: Object
+ 🔍 useCandidates: Executing candidate query: Object
+ 🔍 useCandidates: Executing list query: Object
+ 🎆 useVotes hook: Loading votes on mount
+ 🗳️ useVotes: loadVotes called with filters: Object
+ 🔍 useVotes: Executing query: Object
+ 📊 AdminDashboard: Recalculating stats with data: Object
+ 📊 AdminDashboard: Stats calculation DETAILED: Object
+ 📈 Participation by level - Básica Elemental: Object
+ 📈 Participation by level - Básica Media: Object
+ 📈 Participation by level - Básica Superior: Object
+ 📈 Participation by level - Bachillerato: Object
+ 📊 Stats updated: Object
+ 📊 Raw stats calculation check: Object
+ 📈 Participation by level updated: Array(0)
+ 🎆 useStudents hook: Loading students on mount
+ 📚 useStudents: loadStudents called with filters: Object
+ 🔍 useStudents: Executing query: Object
+ 🏆 useCandidates: loadCandidates called with filters: Object
+ 🔍 useCandidates: Executing candidate query: Object
+ 🔍 useCandidates: Executing list query: Object
+ 🎆 useVotes hook: Loading votes on mount
+ 🗳️ useVotes: loadVotes called with filters: Object
+ 🔍 useVotes: Executing query: Object
+ 📊 AdminDashboard: Recalculating stats with data: Object
+AdminDashboard.jsx:156 📊 AdminDashboard: Stats calculation DETAILED: Object
+AdminDashboard.jsx:211 📈 Participation by level - Básica Elemental: Object
+AdminDashboard.jsx:211 📈 Participation by level - Básica Media: Object
+AdminDashboard.jsx:211 📈 Participation by level - Básica Superior: Object
+AdminDashboard.jsx:211 📈 Participation by level - Bachillerato: Object
+AdminDashboard.jsx:243 📊 Stats updated: Object
+AdminDashboard.jsx:244 📊 Raw stats calculation check: Object
+AdminDashboard.jsx:250 📈 Participation by level updated: Array(0)
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+useDatabase.js:165 📊 useStudents: Query result: Object
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+useDatabase.js:493 📊 useVotes: Query result: Object
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+ElectionConfigContext.jsx:76 📝 Usando configuración por defecto
+useDatabase.js:367 📊 useCandidates: Combined results: Object
+useDatabase.js:165 📊 useStudents: Query result: Object
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+useDatabase.js:493 📊 useVotes: Query result: Object
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+ElectionConfigContext.jsx:76 📝 Usando configuración por defecto
+useDatabase.js:367 📊 useCandidates: Combined results: Object
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+AdminDashboard.jsx:70 📊 Database ready, syncing students. DB count: 557
+AdminDashboard.jsx:83 🏆 AdminDashboard: Database ready, syncing candidates. DB count: 2
+AdminDashboard.jsx:84 🏆 AdminDashboard: Candidates data: Array(2)
+AdminDashboard.jsx:98 🏆 AdminDashboard: Electoral lists detected: 2 Array(2)
+AdminDashboard.jsx:109 🗳️ AdminDashboard: Database ready, syncing votes. DB count: 7
+AdminDashboard.jsx:110 🗳️ AdminDashboard: Votes data sample: Array(3)
+AdminDashboard.jsx:111 🗳️ AdminDashboard: First vote structure: Object
+AdminDashboard.jsx:120 🗳️ AdminDashboard: Found votes, checking structure...
+AdminDashboard.jsx:123 Vote 1: Object
+AdminDashboard.jsx:123 Vote 2: Object
+AdminDashboard.jsx:123 Vote 3: Object
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+AdminDashboard.jsx:230 📊 AdminDashboard: Recalculating stats with data: Object
+AdminDashboard.jsx:156 📊 AdminDashboard: Stats calculation DETAILED: Object
+AdminDashboard.jsx:211 📈 Participation by level - Básica Elemental: Object
+AdminDashboard.jsx:211 📈 Participation by level - Básica Media: Object
+AdminDashboard.jsx:211 📈 Participation by level - Básica Superior: Object
+AdminDashboard.jsx:211 📈 Participation by level - Bachillerato: Object
+AdminDashboard.jsx:243 📊 Stats updated: Object
+AdminDashboard.jsx:244 📊 Raw stats calculation check: Object
+AdminDashboard.jsx:250 📈 Participation by level updated: Array(4)
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+AdminDashboard.jsx:655 📊 ResultsCharts: Vote calculation: Object
+StudentManager.jsx:36 🔍 StudentManager - Processing students: 557 students
+StudentManager.jsx:37 🔍 StudentManager - Filters: Object
+StudentManager.jsx:38 🔍 StudentManager - Sample student: Object
+StudentManager.jsx:36 🔍 StudentManager - Processing students: 557 students
+StudentManager.jsx:37 🔍 StudentManager - Filters: Object
+StudentManager.jsx:38 🔍 StudentManager - Sample student: Object
+StudentManager.jsx:36 🔍 StudentManager - Processing students: 557 students
+StudentManager.jsx:37 🔍 StudentManager - Filters: Object
+StudentManager.jsx:38 🔍 StudentManager - Sample student: Object
+StudentManager.jsx:67 🔍 Applying status filter: voted
+StudentManager.jsx:68 🔍 Available statuses in data: Array(1)
+StudentManager.jsx:73 🔍 After status filter: 0 students
+StudentManager.jsx:36 🔍 StudentManager - Processing students: 557 students
+StudentManager.jsx:37 🔍 StudentManager - Filters: Object
+StudentManager.jsx:38 🔍 StudentManager - Sample student: Object
+StudentManager.jsx:67 🔍 Applying status filter: voted
+StudentManager.jsx:68 🔍 Available statuses in data: Array(1)
+StudentManager.jsx:73 🔍 After status filter: 0 students
+debugStudentFilters()
+StudentManager.jsx:125 🔍 STUDENT MANAGER DEBUG:
+StudentManager.jsx:126 Total students: 557
+StudentManager.jsx:127 Current filters: {levelFilter: 'ALL', statusFilter: 'voted', searchTerm: ''}
+StudentManager.jsx:130 Sample students (first 3):
+StudentManager.jsx:132 Student 1: {id: 'student_108693667_1753046957116_s8nljbb59', nombre: 'Rosmary Alexandra', apellidos: 'Vivas Rangel', nivel: 'BASICA_SUPERIOR', status: 'pending', …}
+StudentManager.jsx:132 Student 2: {id: 'student_108724677_1753046957116_5fr7bzbwe', nombre: 'Ronald David', apellidos: 'Vivas Rangel', nivel: 'BACHILLERATO', status: 'pending', …}
+StudentManager.jsx:132 Student 3: {id: 'student_1127074650_1753046957114_30o449auf', nombre: 'Mariana Liseth', apellidos: 'Alvarez Meaguaje', nivel: 'BASICA_SUPERIOR', status: 'pending', …}
+StudentManager.jsx:142 Unique levels (nivel field): (5) ['BASICA_SUPERIOR', 'BACHILLERATO', 'BASICA_MEDIA', 'BASICA_ELEMENTAL', 'PREPARATORIA']0: "BASICA_SUPERIOR"1: "BACHILLERATO"2: "BASICA_MEDIA"3: "BASICA_ELEMENTAL"4: "PREPARATORIA"length: 5[[Prototype]]: Array(0)
+StudentManager.jsx:143 Unique levels (level field): [undefined]
+StudentManager.jsx:144 Unique statuses: ['pending']
+StudentManager.jsx:145 Students without nivel: 0
+StudentManager.jsx:146 Students without level: 557
+StudentManager.jsx:147 Students without status: 0
+StudentManager.jsx:150 Filtered results: 0
+undefined
+StudentManager.jsx:36 🔍 StudentManager - Processing students: 557 students
+StudentManager.jsx:37 🔍 StudentManager - Filters: {levelFilter: 'ALL', statusFilter: 'ALL', searchTerm: ''}
+StudentManager.jsx:38 🔍 StudentManager - Sample student: {id: 'student_108693667', cedula: '108693667', nombres: 'Rosmary Alexandra', apellidos: 'Vivas Rangel', curso: 'D�cimo B', …}
+StudentManager.jsx:36 🔍 StudentManager - Processing students: 557 students
+StudentManager.jsx:37 🔍 StudentManager - Filters: {levelFilter: 'ALL', statusFilter: 'ALL', searchTerm: ''}
+StudentManager.jsx:38 🔍 StudentManager - Sample student: {id: 'student_108693667', cedula: '108693667', nombres: 'Rosmary Alexandra', apellidos: 'Vivas Rangel', curso: 'D�cimo B', …}
+debugStudentFilters()
+StudentManager.jsx:125 🔍 STUDENT MANAGER DEBUG:
+StudentManager.jsx:126 Total students: 557
+StudentManager.jsx:127 Current filters: {levelFilter: 'ALL', statusFilter: 'ALL', searchTerm: ''}
+StudentManager.jsx:130 Sample students (first 3):
+StudentManager.jsx:132 Student 1: {id: 'student_108693667_1753046957116_s8nljbb59', nombre: 'Rosmary Alexandra', apellidos: 'Vivas Rangel', nivel: 'BASICA_SUPERIOR', status: 'pending', …}
+StudentManager.jsx:132 Student 2: {id: 'student_108724677_1753046957116_5fr7bzbwe', nombre: 'Ronald David', apellidos: 'Vivas Rangel', nivel: 'BACHILLERATO', status: 'pending', …}
+StudentManager.jsx:132 Student 3: {id: 'student_1127074650_1753046957114_30o449auf', nombre: 'Mariana Liseth', apellidos: 'Alvarez Meaguaje', nivel: 'BASICA_SUPERIOR', status: 'pending', …}
+StudentManager.jsx:142 Unique levels (nivel field): (5) ['BASICA_SUPERIOR', 'BACHILLERATO', 'BASICA_MEDIA', 'BASICA_ELEMENTAL', 'PREPARATORIA']
+StudentManager.jsx:143 Unique levels (level field): [undefined]
+StudentManager.jsx:144 Unique statuses: ['pending']
+StudentManager.jsx:145 Students without nivel: 0
+StudentManager.jsx:146 Students without level: 557
+StudentManager.jsx:147 Students without status: 0
+StudentManager.jsx:150 Filtered results: 557
+undefined
+StudentManager.jsx:36 🔍 StudentManager - Processing students: 557 students
+StudentManager.jsx:37 🔍 StudentManager - Filters: {levelFilter: 'ALL', statusFilter: 'voted', searchTerm: ''}
+StudentManager.jsx:38 🔍 StudentManager - Sample student: {id: 'student_108693667', cedula: '108693667', nombres: 'Rosmary Alexandra', apellidos: 'Vivas Rangel', curso: 'D�cimo B', …}apellidos: "Vivas Rangel"año: 2025cedula: "108693667"created: "2025-07-20T21:29:07.382Z"createdAt: "2025-07-20T21:29:17.116Z"curso: "D�cimo B"id: "student_108693667"nivel: "BASICA_SUPERIOR"nombres: "Rosmary Alexandra"status: "pending"type: "student"updatedAt: "2025-07-20T21:29:17.116Z"_id: "student_108693667_1753046957116_s8nljbb59"[[Prototype]]: Object
+StudentManager.jsx:67 🔍 Applying status filter: voted
+StudentManager.jsx:68 🔍 Available statuses in data: ['pending']0: "pending"length: 1[[Prototype]]: Array(0)
+StudentManager.jsx:73 🔍 After status filter: 0 students
+StudentManager.jsx:36 🔍 StudentManager - Processing students: 557 students
+StudentManager.jsx:37 🔍 StudentManager - Filters: {levelFilter: 'ALL', statusFilter: 'voted', searchTerm: ''}
+StudentManager.jsx:38 🔍 StudentManager - Sample student: {id: 'student_108693667', cedula: '108693667', nombres: 'Rosmary Alexandra', apellidos: 'Vivas Rangel', curso: 'D�cimo B', …}
+StudentManager.jsx:67 🔍 Applying status filter: voted
+StudentManager.jsx:68 🔍 Available statuses in data: ['pending']
+StudentManager.jsx:73 🔍 After status filter: 0 students
+StudentManager.jsx:36 🔍 StudentManager - Processing students: 557 students
+StudentManager.jsx:37 🔍 StudentManager - Filters: {levelFilter: 'ALL', statusFilter: 'ALL', searchTerm: ''}
+StudentManager.jsx:38 🔍 StudentManager - Sample student: {id: 'student_108693667', cedula: '108693667', nombres: 'Rosmary Alexandra', apellidos: 'Vivas Rangel', curso: 'D�cimo B', …}
+StudentManager.jsx:36 🔍 StudentManager - Processing students: 557 students
+StudentManager.jsx:37 🔍 StudentManager - Filters: {levelFilter: 'ALL', statusFilter: 'ALL', searchTerm: ''}
+StudentManager.jsx:38 🔍 StudentManager - Sample student: {id: 'student_108693667', cedula: '108693667', nombres: 'Rosmary Alexandra', apellidos: 'Vivas Rangel', curso: 'D�cimo B', …}

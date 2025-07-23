@@ -1,11 +1,16 @@
 // src/services/database-indexeddb.js
 // Native IndexedDB implementation without PouchDB
+// Performance optimized for 1000+ students
 
 console.log('🔧 Initializing IndexedDB service...')
 
+// Import performance monitor and smart cache
+import performanceMonitor from '../utils/performanceMonitor.js';
+import smartCache from '../utils/smartCache.js';
+
 // Database configuration
 const DB_NAME = 'votaciones_estudiantiles_2024'
-const DB_VERSION = 2
+const DB_VERSION = 3  // Incremented for new performance indexes
 
 // Object stores (tables)
 const STORES = {
@@ -90,27 +95,63 @@ class IndexedDBService {
               autoIncrement: false 
             })
             
-            // Create indexes for common queries
+            // Create optimized indexes for performance
             store.createIndex('type', 'type', { unique: false })
             store.createIndex('createdAt', 'createdAt', { unique: false })
+            store.createIndex('updatedAt', 'updatedAt', { unique: false })
             
-            // Store-specific indexes
+            // Store-specific optimized indexes
             if (storeName === 'students') {
+              // Basic indexes
               store.createIndex('level', 'level', { unique: false })
               store.createIndex('course', 'course', { unique: false })
               store.createIndex('cedula', 'cedula', { unique: true })
+              store.createIndex('status', 'status', { unique: false })
+              store.createIndex('absent', 'absent', { unique: false })
+              store.createIndex('votado', 'votado', { unique: false })
+              
+              // Composite indexes for complex queries (performance critical)
+              store.createIndex('type_course', ['type', 'course'], { unique: false })
+              store.createIndex('course_status', ['course', 'status'], { unique: false })
+              store.createIndex('level_course', ['level', 'course'], { unique: false })
+              store.createIndex('status_absent', ['status', 'absent'], { unique: false })
+              
+              // Search optimization indexes
+              store.createIndex('nombres', 'nombres', { unique: false })
+              store.createIndex('apellidos', 'apellidos', { unique: false })
+              
             } else if (storeName === 'candidates') {
+              // Basic indexes
               store.createIndex('level', 'level', { unique: false })
               store.createIndex('cargo', 'cargo', { unique: false })
+              store.createIndex('listName', 'listName', { unique: false })
+              store.createIndex('presidentName', 'presidentName', { unique: false })
+              store.createIndex('vicePresidentName', 'vicePresidentName', { unique: false })
+              
+              // Composite indexes for electoral lists
+              store.createIndex('type_listName', ['type', 'listName'], { unique: false })
+              
             } else if (storeName === 'votes') {
+              // Basic indexes
               store.createIndex('studentId', 'studentId', { unique: false })
               store.createIndex('candidateId', 'candidateId', { unique: false })
+              store.createIndex('listId', 'listId', { unique: false })
               store.createIndex('timestamp', 'timestamp', { unique: false })
+              
+              // Composite indexes for vote analysis
+              store.createIndex('type_timestamp', ['type', 'timestamp'], { unique: false })
+              store.createIndex('studentId_timestamp', ['studentId', 'timestamp'], { unique: false })
+              store.createIndex('listId_timestamp', ['listId', 'timestamp'], { unique: false })
+              
             } else if (storeName === 'activation_codes') {
-              store.createIndex('code', 'code', { unique: true })  // Código único
-              store.createIndex('course', 'course', { unique: false })  // Búsqueda por curso
-              store.createIndex('is_active', 'is_active', { unique: false })  // Filtrar activos
-              store.createIndex('generated_at', 'generated_at', { unique: false })  // Ordenar por fecha
+              // Basic indexes
+              store.createIndex('code', 'code', { unique: true })
+              store.createIndex('course', 'course', { unique: false })
+              store.createIndex('is_active', 'is_active', { unique: false })
+              store.createIndex('generated_at', 'generated_at', { unique: false })
+              
+              // Composite indexes for code management
+              store.createIndex('is_active_course', ['is_active', 'course'], { unique: false })
             }
             
             console.log(`📊 Created object store: ${storeName}`)
@@ -181,22 +222,44 @@ class IndexedDBService {
   }
 
   /**
-   * Find documents with query
+   * Find documents with query (Performance Optimized)
    */
   async findDocuments(storeName, query = {}) {
+    const timer = performanceMonitor?.startTimer('indexedDBQuery');
+    
     try {
       await this.ensureReady()
+
+      // Generate cache key for this query
+      const cacheKey = this.generateCacheKey(storeName, query);
+      
+      // Try to get from cache first (for read-heavy operations)
+      if (this.isCacheableQuery(storeName, query)) {
+        const cached = smartCache.get(cacheKey, this.getCacheType(storeName));
+        if (cached) {
+          timer?.end({ 
+            storeName, 
+            queryType: 'find',
+            cached: true,
+            resultCount: cached.docs?.length || 0 
+          });
+          return cached;
+        }
+      }
 
       return new Promise((resolve, reject) => {
         const transaction = this.db.transaction([storeName], 'readonly')
         const store = transaction.objectStore(storeName)
-        const request = store.getAll()
+        
+        // Use optimized index queries when possible
+        const indexQuery = this.optimizeQuery(store, query);
+        const request = indexQuery || store.getAll();
 
         request.onsuccess = () => {
           let documents = request.result || []
           
-          // Apply selector filter
-          if (query.selector) {
+          // Apply selector filter (only if not using index)
+          if (query.selector && !indexQuery) {
             documents = this.filterDocuments(documents, query.selector)
           }
 
@@ -205,23 +268,144 @@ class IndexedDBService {
             documents = documents.slice(0, query.limit)
           }
 
-          resolve({
+          const result = {
             success: true,
             docs: documents,
             total: documents.length
-          })
+          };
+
+          // Cache the result if appropriate
+          if (this.isCacheableQuery(storeName, query)) {
+            smartCache.set(cacheKey, result, this.getCacheType(storeName));
+          }
+
+          timer?.end({ 
+            storeName, 
+            queryType: 'find',
+            cached: false,
+            resultCount: documents.length,
+            indexUsed: !!indexQuery
+          });
+
+          resolve(result);
         }
 
         request.onerror = () => {
           console.error(`❌ Failed to find documents in ${storeName}:`, request.error)
+          timer?.end({ 
+            storeName, 
+            queryType: 'find',
+            error: request.error.message 
+          });
           reject(request.error)
         }
       })
 
     } catch (error) {
       console.error(`❌ Find documents error:`, error)
+      timer?.end({ 
+        storeName, 
+        queryType: 'find',
+        error: error.message 
+      });
       return { success: false, docs: [], total: 0, error: error.message }
     }
+  }
+
+  /**
+   * Generate cache key for query
+   */
+  generateCacheKey(storeName, query) {
+    const queryStr = JSON.stringify(query);
+    return `query-${storeName}-${btoa(queryStr).substring(0, 20)}`;
+  }
+
+  /**
+   * Check if query should be cached
+   */
+  isCacheableQuery(storeName, query) {
+    // Cache simple queries without complex selectors
+    if (storeName === 'candidates' && query.selector?.type === 'list') {
+      return true; // Electoral lists change rarely
+    }
+    
+    if (storeName === 'students' && query.selector?.course) {
+      return true; // Students by course are frequently accessed
+    }
+    
+    // Don't cache complex queries or write operations
+    return false;
+  }
+
+  /**
+   * Get cache type for store
+   */
+  getCacheType(storeName) {
+    const typeMap = {
+      'candidates': 'electoralLists',
+      'students': 'students',
+      'votes': 'votes',
+    };
+    return typeMap[storeName] || 'default';
+  }
+
+  /**
+   * Optimize query using indexes
+   */
+  optimizeQuery(store, query) {
+    if (!query.selector) return null;
+    
+    const selector = query.selector;
+    
+    // Try to use composite indexes first (most efficient)
+    if (selector.type && selector.course) {
+      try {
+        const index = store.index('type_course');
+        return index.getAll([selector.type, selector.course]);
+      } catch (e) {
+        // Index doesn't exist, fall back
+      }
+    }
+    
+    if (selector.course && selector.status) {
+      try {
+        const index = store.index('course_status');
+        return index.getAll([selector.course, selector.status]);
+      } catch (e) {
+        // Index doesn't exist, fall back
+      }
+    }
+    
+    // Try single column indexes
+    if (selector.type) {
+      try {
+        const index = store.index('type');
+        return index.getAll(selector.type);
+      } catch (e) {
+        // Index doesn't exist, fall back
+      }
+    }
+    
+    if (selector.course) {
+      try {
+        const index = store.index('course');
+        return index.getAll(selector.course);
+      } catch (e) {
+        // Index doesn't exist, fall back
+      }
+    }
+    
+    if (selector.cedula) {
+      try {
+        const index = store.index('cedula');
+        return index.get(selector.cedula);
+      } catch (e) {
+        // Index doesn't exist, fall back
+      }
+    }
+    
+    // No suitable index found
+    return null;
   }
 
   /**
@@ -265,9 +449,11 @@ class IndexedDBService {
   }
 
   /**
-   * Update document
+   * Update document (Performance Optimized)
    */
   async updateDocument(storeName, document) {
+    const timer = performanceMonitor?.startTimer('indexedDBUpdate');
+    
     try {
       await this.ensureReady()
 
@@ -283,6 +469,12 @@ class IndexedDBService {
 
         request.onsuccess = () => {
           console.log(`✅ Document updated in ${storeName}:`, document._id)
+          
+          // Invalidate related cache entries
+          this.invalidateRelatedCache(storeName, document);
+          
+          timer?.end({ storeName, queryType: 'update', documentId: document._id });
+          
           resolve({ 
             success: true, 
             id: document._id, 
@@ -292,14 +484,54 @@ class IndexedDBService {
 
         request.onerror = () => {
           console.error(`❌ Failed to update document in ${storeName}:`, request.error)
+          timer?.end({ 
+            storeName, 
+            queryType: 'update', 
+            error: request.error.message 
+          });
           reject(request.error)
         }
       })
 
     } catch (error) {
       console.error(`❌ Update document error:`, error)
+      timer?.end({ 
+        storeName, 
+        queryType: 'update', 
+        error: error.message 
+      });
       return { success: false, error: error.message }
     }
+  }
+
+  /**
+   * Invalidate cache entries related to a document update
+   */
+  invalidateRelatedCache(storeName, document) {
+    // Invalidate queries that might be affected by this update
+    if (storeName === 'students') {
+      // Invalidate student course cache
+      if (document.course) {
+        smartCache.invalidatePattern(`students-course-${document.course}`);
+      }
+      
+      // Invalidate search results cache
+      smartCache.invalidatePattern('search-');
+      
+      // Invalidate stats cache
+      smartCache.invalidatePattern('stats-');
+      
+    } else if (storeName === 'candidates') {
+      // Invalidate electoral lists cache
+      smartCache.invalidatePattern('electoral-lists');
+      
+    } else if (storeName === 'votes') {
+      // Invalidate vote-related caches
+      smartCache.invalidatePattern('stats-');
+      smartCache.invalidatePattern('votes-');
+    }
+    
+    console.log(`🔄 Cache invalidated for ${storeName} update`);
   }
 
   /**

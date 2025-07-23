@@ -1,6 +1,7 @@
 // src/components/tutor/StudentCard.jsx
 import React, { useState } from 'react';
 import { useStudents } from '../../contexts/StudentsContext';
+import { useCandidates } from '../../contexts/CandidatesContext';
 import './StudentCard.css';
 
 const StudentCard = ({ student, status, index, onStartVoting }) => {
@@ -12,24 +13,51 @@ const StudentCard = ({ student, status, index, onStartVoting }) => {
     getStudentId 
   } = useStudents();
   
+  const { hasVotedSync } = useCandidates();
+  
   const [isProcessing, setIsProcessing] = useState(false);
   
   const studentId = getStudentId(student);
   const studentState = studentStates[studentId];
+  
 
   const handleStartVoting = async () => {
     setIsProcessing(true);
     
-    // Simular breve delay de preparación
-    setTimeout(() => {
-      if (window.confirm(`¿Confirmar inicio de votación para ${student.nombres || student.nombre} ${student.apellidos}?`)) {
-        // Llamar al callback para abrir la interfaz de votación
-        if (onStartVoting) {
-          onStartVoting(student);
-        }
+    try {
+      // Verificar si el estudiante ya votó (verificación síncrona para UI)
+      
+      // Use sync check first
+      const alreadyVotedSync = hasVotedSync(studentId);
+      if (alreadyVotedSync) {
+        alert(`❌ ${student.nombres || student.nombre} ${student.apellidos} ya ha votado según registros en memoria.`);
+        setIsProcessing(false);
+        return;
       }
+      
+      // Check student state
+      if (studentState?.status === 'voted') {
+        alert(`❌ ${student.nombres || student.nombre} ${student.apellidos} ya ha votado según el estado del estudiante.`);
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Simular breve delay de preparación
+      setTimeout(() => {
+        if (window.confirm(`¿Confirmar inicio de votación para ${student.nombres || student.nombre} ${student.apellidos}?`)) {
+          // Llamar al callback para abrir la interfaz de votación
+          if (onStartVoting) {
+            onStartVoting(student);
+          }
+        }
+        setIsProcessing(false);
+      }, 500);
+      
+    } catch (error) {
+      console.error('Error checking voting status:', error);
       setIsProcessing(false);
-    }, 500);
+      alert('❌ Error al verificar el estado de votación. Intente nuevamente.');
+    }
   };
 
   const handleMarkAbsent = () => {

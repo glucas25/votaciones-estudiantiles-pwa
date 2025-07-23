@@ -9,9 +9,10 @@ const VoteConfirmation = ({ student, onConfirm, onCancel }) => {
     selectedVotes, 
     getListById, 
     castVote,
-    candidates 
+    candidates,
+    hasVoted
   } = useCandidates();
-  const { markStudentAsVoted } = useStudents();
+  const { markStudentAsVoted, getStudentId } = useStudents();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -29,18 +30,33 @@ const VoteConfirmation = ({ student, onConfirm, onCancel }) => {
     setIsSubmitting(true);
     
     try {
-      // Cast vote for the selected list
-      const voteRecord = await castVote(student.id, selectedListId);
-
-      // Mark student as voted
-      markStudentAsVoted(student.id);
+      // Use consistent student ID
+      const studentId = getStudentId(student);
+      console.log('🗳️ VoteConfirmation: Processing vote for student ID:', studentId);
       
+      // CRITICAL: Final check to prevent duplicate voting
+      console.log('🔍 Final verification: Checking if student has already voted...');
+      const alreadyVoted = await hasVoted(studentId);
+      
+      if (alreadyVoted) {
+        alert('❌ Este estudiante ya ha votado. No se permite votar múltiples veces.');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Cast vote for the selected list
+      const voteRecord = await castVote(studentId, selectedListId);
+
+      // Mark student as voted (now async)
+      await markStudentAsVoted(studentId);
+      
+      console.log('✅ VoteConfirmation: Vote completed and student marked as voted:', studentId);
       setSubmitted(true);
       
       // Simulate processing delay
       setTimeout(() => {
         onConfirm(voteRecord);
-      }, 2000);
+      }, 1500);
       
     } catch (error) {
       console.error('Error al registrar voto:', error);

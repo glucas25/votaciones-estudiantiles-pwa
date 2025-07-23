@@ -49,6 +49,29 @@
   font-weight: 500;
 }
 
+.btn-sync {
+  background: linear-gradient(135deg, #3b82f6, #1e40af);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.btn-sync:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
+}
+
+.btn-sync:active {
+  transform: translateY(0);
+}
+
 /* New Election Section */
 .election-reset {
   text-align: center;
@@ -185,6 +208,10 @@
 
 .summary-card.voted {
   border-left-color: #22c55e;
+}
+
+.summary-card.not-voted {
+  border-left-color: #f59e0b;
 }
 
 .summary-card.absent {
@@ -1026,5 +1053,260 @@
     background: white !important;
     box-shadow: none !important;
     border: 1px solid #ccc !important;
+  }
+}
+
+/* Participation by Course Styles */
+.participation-by-course-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.course-level-group {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid;
+}
+
+.course-level-group:nth-child(1) {
+  border-left-color: #10b981; /* Básica Elemental - Green */
+}
+
+.course-level-group:nth-child(2) {
+  border-left-color: #3b82f6; /* Básica Media - Blue */
+}
+
+.course-level-group:nth-child(3) {
+  border-left-color: #f59e0b; /* Básica Superior - Orange */
+}
+
+.course-level-group:nth-child(4) {
+  border-left-color: #8b5cf6; /* Bachillerato - Purple */
+}
+
+.level-header {
+  margin: 0 0 1.5rem 0;
+  color: #1e293b;
+  font-size: 1.2rem;
+  font-weight: 700;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.course-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.course-participation-card {
+  background: #f8fafc;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+  animation: slideIn 0.3s ease;
+}
+
+.course-participation-card:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.course-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.course-name {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1rem;
+  font-weight: 600;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.course-numbers {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 600;
+}
+
+.course-numbers .voted {
+  color: #059669;
+  font-size: 1.1rem;
+}
+
+.course-numbers .separator {
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.course-numbers .total {
+  color: #374151;
+  font-size: 1rem;
+}
+
+.course-percentage {
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+
+.percentage-text {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.course-participation-bar {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.course-participation-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.8s ease;
+}
+
+.course-status {
+  text-align: center;
+}
+
+.course-status span {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-excellent {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-good {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-regular {
+  background: #fed7aa;
+  color: #9a3412;
+}
+
+.status-low {
+  background: #fecaca;
+  color: #991b1b;
+}
+
+.course-summary {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: 2px solid #e5e7eb;
+  margin-top: 1rem;
+}
+
+.course-summary h5 {
+  margin: 0 0 1rem 0;
+  color: #1e293b;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.summary-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+}
+
+.summary-label {
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.summary-value {
+  color: #1e293b;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+/* Responsive design for course participation */
+@media (max-width: 768px) {
+  .course-stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .course-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .course-name {
+    max-width: 100%;
+  }
+  
+  .summary-items {
+    grid-template-columns: 1fr;
+  }
+  
+  .summary-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .course-level-group {
+    padding: 1rem;
+  }
+  
+  .course-participation-card {
+    padding: 0.75rem;
+  }
+  
+  .level-header {
+    font-size: 1rem;
+  }
+  
+  .course-name {
+    font-size: 0.9rem;
+  }
+  
+  .percentage-text {
+    font-size: 1.25rem;
   }
 }

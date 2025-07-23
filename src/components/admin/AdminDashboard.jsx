@@ -5,8 +5,9 @@ import DatabaseInspector from './DatabaseInspector';
 import ActivationCodesManager from './ActivationCodesManager';
 import ElectionConfigurator from './ElectionConfigurator';
 import CandidateListManager from './CandidateListManager';
+import ReportGenerator from './ReportGenerator';
 import AdminContext from '../../contexts/AdminContext';
-import { useDatabase, useStudents, useCandidates } from '../../hooks/useDatabase.js';
+import { useDatabase, useStudents, useCandidates, useVotes } from '../../hooks/useDatabase.js';
 import databaseService, { DOC_TYPES } from '../../services/database-indexeddb.js';
 import activationCodesService from '../../services/activationCodes.js';
 import './AdminDashboard.css';
@@ -16,6 +17,7 @@ import './AdminDashboard.css';
 const defaultStats = {
   totalStudents: 0,
   studentsVoted: 0,
+  studentsNotVoted: 0,
   studentsAbsent: 0,
   activeCourses: 0,
   totalCourses: 0,
@@ -38,63 +40,229 @@ function AdminDashboard() {
     addStudent,
     updateStudent,
     deleteStudent,
-    importStudents
+    importStudents,
+    loadStudents: refetchStudents
   } = useStudents();
   const { 
     candidates: dbCandidates, 
     loading: candidatesLoading,
     addCandidate,
     updateCandidate,
-    deleteCandidate
+    deleteCandidate,
+    loadCandidates: refetchCandidates
   } = useCandidates();
+  const { 
+    votes: dbVotes, 
+    loading: votesLoading,
+    loadVotes: refetchVotes
+  } = useVotes();
+
+  /**
+   * Update student voting status based on vote records
+   */
+  const updateStudentVotingStatus = (studentsData, votesData) => {
+    if (!studentsData || !votesData || votesData.length === 0) {
+      console.log('🔍 AdminDashboard: No votes to sync, returning students as-is');
+      return studentsData;
+    }
+
+    console.log(`🔄 AdminDashboard: Updating ${studentsData.length} students with ${votesData.length} votes`);
+    
+    // Create a Set of student IDs who have voted for fast lookup
+    const votedStudentIds = new Set(votesData.map(vote => vote.studentId));
+    console.log('🔍 AdminDashboard: Voted student IDs:', Array.from(votedStudentIds).slice(0, 5));
+    
+    const updatedStudents = studentsData.map(student => {
+      const studentId = student._id || student.id || student.cedula;
+      let hasVoted = votedStudentIds.has(studentId);
+      
+      // BACKUP MATCH: If not found, try alternative ID formats
+      if (!hasVoted) {
+        // Try with just the _id
+        hasVoted = hasVoted || votedStudentIds.has(student._id);
+        // Try with just the id
+        hasVoted = hasVoted || votedStudentIds.has(student.id);
+        // Try with just the cedula
+        hasVoted = hasVoted || votedStudentIds.has(student.cedula);
+        
+        // Try to find votes that contain the cedula in complex IDs
+        if (!hasVoted && student.cedula) {
+          const cedulaVotes = Array.from(votedStudentIds).filter(voteId => 
+            voteId.includes(student.cedula)
+          );
+          hasVoted = cedulaVotes.length > 0;
+          
+          if (hasVoted) {
+            console.log(`🔄 AdminDashboard: Backup match found for student ${student.cedula} with vote ID ${cedulaVotes[0]}`);
+          }
+        }
+      }
+      
+      // Log matches for debugging
+      if (hasVoted) {
+        console.log(`✅ AdminDashboard: Student ${studentId} (${student.nombres}) marked as voted`);
+      }
+      
+      // Determine status priority: voted > absent > pending
+      let finalStatus = 'pending';
+      if (hasVoted) {
+        finalStatus = 'voted';
+      } else if (student.absent === true || student.status === 'absent') {
+        finalStatus = 'absent';
+      } else {
+        finalStatus = student.status || 'pending';
+      }
+      
+      // Log absent students for debugging
+      if (finalStatus === 'absent') {
+        console.log(`❌ AdminDashboard: Student ${studentId} (${student.nombres}) marked as absent`);
+      }
+      
+      return {
+        ...student,
+        status: finalStatus,
+        votado: hasVoted ? true : (student.votado || false),
+        absent: finalStatus === 'absent' ? true : (student.absent || false)
+      };
+    });
+    
+    const votedCount = updatedStudents.filter(s => s.status === 'voted').length;
+    const absentCount = updatedStudents.filter(s => s.status === 'absent').length;
+    const pendingCount = updatedStudents.filter(s => s.status === 'pending').length;
+    
+    console.log(`📊 AdminDashboard: Status summary - Voted: ${votedCount}, Absent: ${absentCount}, Pending: ${pendingCount}, Total: ${studentsData.length}`);
+    
+    return updatedStudents;
+  };
 
   // Local state - starts empty, filled from database
   const [candidates, setCandidates] = useState([]);
   const [students, setStudents] = useState([]);
+  const [votes, setVotes] = useState([]);
   const [stats, setStats] = useState(defaultStats);
   const [participationByLevel, setParticipationByLevel] = useState([]);
+  const [participationByCourse, setParticipationByCourse] = useState([]);
 
-  // Sync with database data
+  // Sync with database data and update student voting status
   useEffect(() => {
     if (isReady && !studentsLoading) {
       console.log('📊 Database ready, syncing students. DB count:', dbStudents.length);
-      // Always use database data (including empty array) when database is ready
-      setStudents(dbStudents);
+      
+      // Update student status based on votes before setting state
+      const updatedStudents = updateStudentVotingStatus(dbStudents, votes);
+      setStudents(updatedStudents);
       
       // Database is ready for real student data
       if (dbStudents.length === 0) {
         console.log('📊 Database is empty. Import real student data to begin.');
       }
     }
-  }, [isReady, studentsLoading, dbStudents]);
+  }, [isReady, studentsLoading, dbStudents, votes]); // Added votes dependency
 
   useEffect(() => {
     if (isReady && !candidatesLoading) {
-      console.log('🏆 Database ready, syncing candidates. DB count:', dbCandidates.length);
+      console.log('🏆 AdminDashboard: Database ready, syncing candidates. DB count:', dbCandidates.length);
+      console.log('🏆 AdminDashboard: Candidates data:', dbCandidates);
+      
       // Always use database data (including empty array) when database is ready
       setCandidates(dbCandidates);
       
+      // Log electoral lists specifically
+      const electoralLists = dbCandidates.filter(c => 
+        c.type === 'list' || 
+        (c.type === 'candidate' && c.listName) ||
+        c.listName ||
+        c.presidentName ||
+        c.vicePresidentName
+      );
+      
+      console.log('🏆 AdminDashboard: Electoral lists detected:', electoralLists.length, electoralLists);
+      
       // Database is ready for electoral lists
       if (dbCandidates.length === 0) {
-        console.log('🏆 Database is empty. Create electoral lists to begin voting.');
+        console.log('🏆 AdminDashboard: Database is empty. Create electoral lists to begin voting.');
       }
     }
   }, [isReady, candidatesLoading, dbCandidates]);
 
+  useEffect(() => {
+    if (isReady && !votesLoading) {
+      console.log('🗳️ AdminDashboard: Database ready, syncing votes. DB count:', dbVotes.length);
+      console.log('🗳️ AdminDashboard: Votes data sample:', dbVotes.slice(0, 3));
+      console.log('🗳️ AdminDashboard: First vote structure:', dbVotes[0]);
+      
+      // Always use database data (including empty array) when database is ready
+      setVotes(dbVotes);
+      
+      // When votes change, update student status if we have students
+      if (dbStudents && dbStudents.length > 0) {
+        console.log('🔄 AdminDashboard: Votes updated, recalculating student status...');
+        const updatedStudents = updateStudentVotingStatus(dbStudents, dbVotes);
+        setStudents(updatedStudents);
+      }
+      
+      // Database is ready for votes
+      if (dbVotes.length === 0) {
+        console.log('🗳️ AdminDashboard: No votes registered yet.');
+      } else {
+        console.log('🗳️ AdminDashboard: Found votes, checking structure...');
+        dbVotes.forEach((vote, index) => {
+          if (index < 3) { // Log first 3 votes for debugging
+            console.log(`Vote ${index + 1}:`, {
+              _id: vote._id,
+              studentId: vote.studentId,
+              listId: vote.listId,
+              candidateId: vote.candidateId,
+              timestamp: vote.timestamp,
+              type: vote.type
+            });
+          }
+        });
+      }
+    }
+  }, [isReady, votesLoading, dbVotes, dbStudents]); // Added dbStudents dependency
+
   // Function to calculate real statistics from database data
-  const calculateStats = (studentsData, candidatesData) => {
+  const calculateStats = (studentsData, candidatesData, votesData) => {
     const totalStudents = studentsData.length;
-    const studentsVoted = studentsData.filter(s => s.status === 'voted').length;
+    
+    // Count votes from actual votes database
+    const totalVotes = votesData.length;
+    const studentsVoted = totalVotes; // Each vote represents one student who voted
+    const studentsNotVoted = totalStudents - studentsVoted; // Students who haven't voted yet
+    
+    // Count students specifically marked as absent
     const studentsAbsent = studentsData.filter(s => s.status === 'absent').length;
+    
+    // Also try to count from student status for cross-validation
+    const studentsVotedByStatus = studentsData.filter(s => s.status === 'voted').length;
     
     // Get unique courses from students
     const courses = [...new Set(studentsData.map(s => s.curso).filter(Boolean))];
     const activeCourses = courses.length;
     
+    console.log('📊 AdminDashboard: Stats calculation DETAILED:', {
+      totalStudents,
+      totalVotes,
+      studentsVoted,
+      studentsVotedByStatus,
+      studentsNotVoted,
+      studentsAbsent,
+      activeCourses,
+      votesDataLength: votesData ? votesData.length : 'undefined',
+      votesDataSample: votesData ? votesData.slice(0, 2) : 'undefined',
+      studentsDataSample: studentsData ? studentsData.slice(0, 2).map(s => ({ 
+        id: s._id || s.id, 
+        name: s.nombre, 
+        status: s.status 
+      })) : 'undefined'
+    });
+    
     return {
       totalStudents,
       studentsVoted,
-      studentsAbsent,
+      studentsNotVoted, // Students who haven't voted yet
+      studentsAbsent,   // Students specifically marked as absent
       activeCourses,
       totalCourses: activeCourses, // For now, assume all courses are active
       syncedDevices: 1, // Local database is always synced
@@ -103,8 +271,8 @@ function AdminDashboard() {
     };
   };
 
-  // Function to calculate participation by level
-  const calculateParticipationByLevel = (studentsData) => {
+  // Function to calculate participation by level using real votes data
+  const calculateParticipationByLevel = (studentsData, votesData) => {
     const levelMap = {
       'BASICA_ELEMENTAL': 'Básica Elemental',
       'BASICA_MEDIA': 'Básica Media', 
@@ -112,12 +280,28 @@ function AdminDashboard() {
       'BACHILLERATO': 'Bachillerato'
     };
 
+    // Create a set of student IDs who have voted
+    const votedStudentIds = new Set(votesData.map(vote => vote.studentId).filter(Boolean));
+
     const levels = Object.keys(levelMap);
     return levels.map(levelKey => {
       const levelStudents = studentsData.filter(s => s.nivel === levelKey);
       const total = levelStudents.length;
-      const voted = levelStudents.filter(s => s.status === 'voted').length;
+      
+      // Count students who have actually voted (by checking votes database)
+      const voted = levelStudents.filter(student => {
+        const studentId = student._id || student.id;
+        return votedStudentIds.has(studentId);
+      }).length;
+      
       const percentage = total > 0 ? ((voted / total) * 100) : 0;
+      
+      console.log(`📈 Participation by level - ${levelMap[levelKey]}:`, {
+        total,
+        voted,
+        percentage,
+        votedStudentIds: Array.from(votedStudentIds).slice(0, 3)
+      });
       
       return {
         level: levelMap[levelKey],
@@ -128,19 +312,131 @@ function AdminDashboard() {
     }).filter(level => level.total > 0); // Only include levels with students
   };
 
-  // Update stats when students or candidates data changes
+  // Function to calculate participation by course using real votes data
+  const calculateParticipationByCourse = (studentsData, votesData) => {
+    // Create a set of student IDs who have voted
+    const votedStudentIds = new Set(votesData.map(vote => vote.studentId).filter(Boolean));
+
+    // Get all unique courses from students data
+    const courseList = [...new Set(studentsData.map(s => s.curso).filter(Boolean))];
+    
+    return courseList.map(course => {
+      const courseStudents = studentsData.filter(s => s.curso === course);
+      const total = courseStudents.length;
+      
+      // Count students who have actually voted (by checking votes database)
+      const voted = courseStudents.filter(student => {
+        const studentId = student._id || student.id;
+        let hasVoted = votedStudentIds.has(studentId);
+        
+        // BACKUP MATCH: Try alternative ID formats if not found
+        if (!hasVoted) {
+          hasVoted = hasVoted || votedStudentIds.has(student._id);
+          hasVoted = hasVoted || votedStudentIds.has(student.id);
+          hasVoted = hasVoted || votedStudentIds.has(student.cedula);
+          
+          // Try to find votes that contain the cedula in complex IDs
+          if (!hasVoted && student.cedula) {
+            const cedulaVotes = Array.from(votedStudentIds).filter(voteId => 
+              voteId.includes(student.cedula)
+            );
+            hasVoted = cedulaVotes.length > 0;
+          }
+        }
+        
+        return hasVoted;
+      }).length;
+      
+      const percentage = total > 0 ? ((voted / total) * 100) : 0;
+      
+      console.log(`📈 Participation by course - ${course}:`, {
+        total,
+        voted,
+        percentage,
+        sampleStudents: courseStudents.slice(0, 2).map(s => ({ 
+          name: s.nombres, 
+          id: s._id || s.id,
+          cedula: s.cedula 
+        }))
+      });
+      
+      return {
+        course,
+        voted,
+        total,
+        percentage: Math.round(percentage * 10) / 10, // Round to 1 decimal place
+        // Additional info for better display
+        nivel: courseStudents[0]?.nivel || 'Sin nivel'
+      };
+    }).sort((a, b) => {
+      // Sort by nivel first, then by course name
+      if (a.nivel !== b.nivel) {
+        const nivelOrder = ['BASICA_ELEMENTAL', 'BASICA_MEDIA', 'BASICA_SUPERIOR', 'BACHILLERATO'];
+        return nivelOrder.indexOf(a.nivel) - nivelOrder.indexOf(b.nivel);
+      }
+      return a.course.localeCompare(b.course);
+    }).filter(course => course.total > 0); // Only include courses with students
+  };
+
+  // Update stats when students, candidates, or votes data changes
   useEffect(() => {
     if (students.length >= 0) { // Allow calculation even with empty array
-      const newStats = calculateStats(students, candidates);
+      console.log('📊 AdminDashboard: Recalculating stats with data:', {
+        studentsCount: students.length,
+        candidatesCount: candidates.length,
+        votesCount: votes.length,
+        studentsWithVotedStatus: students.filter(s => s.status === 'voted').length
+      });
+      
+      const newStats = calculateStats(students, candidates, votes);
       setStats(newStats);
       
-      const newParticipation = calculateParticipationByLevel(students);
+      const newParticipation = calculateParticipationByLevel(students, votes);
       setParticipationByLevel(newParticipation);
       
+      const newParticipationByCourse = calculateParticipationByCourse(students, votes);
+      setParticipationByCourse(newParticipationByCourse);
+      
       console.log('📊 Stats updated:', newStats);
+      console.log('📊 Raw stats calculation check:', {
+        inputStudents: students.length,
+        inputVotes: votes.length,
+        outputStudentsVoted: newStats.studentsVoted,
+        outputStudentsAbsent: newStats.studentsAbsent
+      });
       console.log('📈 Participation by level updated:', newParticipation);
+      console.log('📈 Participation by course updated:', newParticipationByCourse);
     }
-  }, [students, candidates]);
+  }, [students, candidates, votes]);
+
+  // Debug function available globally
+  useEffect(() => {
+    window.debugAdminDashboard = () => {
+      console.log('🔍 GLOBAL DEBUG - AdminDashboard Data:');
+      console.log('📚 Students:', students.length, students);
+      console.log('🏆 Candidates:', candidates.length, candidates);
+      console.log('🗳️ Votes:', votes.length, votes);
+      console.log('📊 Stats:', stats);
+      console.log('🗃️ DB Votes:', dbVotes.length, dbVotes);
+      console.log('🗃️ DB Students:', dbStudents.length, dbStudents);
+      console.log('🗃️ DB Candidates:', dbCandidates.length, dbCandidates);
+      
+      // Check if votes exist in IndexedDB directly
+      databaseService.findDocuments('votes', {}).then(result => {
+        console.log('🗂️ Direct DB Query - Votes:', result);
+      });
+      
+      return {
+        localStudents: students.length,
+        localCandidates: candidates.length,
+        localVotes: votes.length,
+        dbStudents: dbStudents.length,
+        dbCandidates: dbCandidates.length,
+        dbVotes: dbVotes.length,
+        stats
+      };
+    };
+  }, [students, candidates, votes, stats, dbStudents, dbCandidates, dbVotes]);
 
   // Student management functions
   const handleStudentAdd = async (newStudent) => {
@@ -265,16 +561,52 @@ function AdminDashboard() {
       students, setStudents,
       stats, setStats,
       participationByLevel,
+      participationByCourse,
       handleStudentAdd,
       handleStudentUpdate, 
       handleStudentDelete,
       handleBulkImport,
+      refetchCandidates,
+      refetchStudents,
+      refetchVotes,
+      votes,
+      debugDashboardData: () => {
+        console.log('🔍 DASHBOARD DEBUG DATA:');
+        console.log('📚 Students:', students.length, students.slice(0, 3));
+        console.log('🏆 Candidates:', candidates.length, candidates.slice(0, 3));
+        console.log('🗳️ Votes:', votes.length, votes.slice(0, 3));
+        console.log('📊 Current Stats:', stats);
+        console.log('📈 Current Participation:', participationByLevel);
+        
+        // Manual stats calculation for debugging
+        const manualStats = calculateStats(students, candidates, votes);
+        console.log('🧮 Manual Stats Calculation:', manualStats);
+        
+        return {
+          students: students.length,
+          candidates: candidates.length,
+          votes: votes.length,
+          stats,
+          manualStats
+        };
+      },
     }}>
       <div className="admin-container">
         {/* Header */}
         <header className="admin-header">
           <h1>🏛️ PANEL DE ADMINISTRACIÓN - ELECCIONES 2024</h1>
           <div className="header-info">
+            <button 
+              className="btn-sync"
+              onClick={async () => {
+                console.log('🔄 Manual sync triggered');
+                await Promise.all([refetchStudents(), refetchCandidates(), refetchVotes()]);
+                console.log('✅ Manual sync completed');
+              }}
+              title="Sincronizar datos con la base de datos"
+            >
+              🔄 Sincronizar
+            </button>
             <span className="status-indicator online">🟢 Conectado</span>
             <span className="time">⏰ {stats.currentTime}</span>
           </div>
@@ -331,7 +663,7 @@ function AdminDashboard() {
           {activeTab === 'dashboard' && <DashboardTab />}
           {activeTab === 'students' && <StudentsTab />}
           {activeTab === 'candidates' && <CandidatesTab />}
-          {activeTab === 'reports' && <ReportsTab />}
+          {activeTab === 'reports' && <ReportGenerator />}
           {activeTab === 'config' && <ConfigTab />}
           {activeTab === 'database' && <DatabaseTab />}
           {activeTab === 'codes' && <ActivationCodesManager />}
@@ -398,6 +730,15 @@ function DashboardTab() {
             </div>
           </div>
           
+          <div className="summary-card not-voted">
+            <div className="summary-icon">⏳</div>
+            <div className="summary-content">
+              <h3>No han Votado</h3>
+              <p className="summary-number">{stats.studentsNotVoted}</p>
+              <p className="summary-percentage">({stats.totalStudents > 0 ? ((stats.studentsNotVoted / stats.totalStudents) * 100).toFixed(1) : '0.0'}%)</p>
+            </div>
+          </div>
+          
           <div className="summary-card absent">
             <div className="summary-icon">❌</div>
             <div className="summary-content">
@@ -435,26 +776,60 @@ function DashboardTab() {
         <h2>📈 PARTICIPACIÓN POR NIVEL</h2>
         <ParticipationStats />
       </section>
+
+      {/* Participación por Curso */}
+      <section className="participation-section">
+        <h2>🎓 PARTICIPACIÓN POR CURSO</h2>
+        <ParticipationByCourseStats />
+      </section>
     </div>
   );
 }
 
 // Componente de gráficos de resultados
 function ResultsCharts() {
-  const { candidates } = useContext(AdminContext);
+  const { candidates, votes } = useContext(AdminContext);
   
-  const presidentCandidates = candidates.filter(c => c.cargo === 'PRESIDENTE');
-  const vicepresidentCandidates = candidates.filter(c => c.cargo === 'VICEPRESIDENTE');
+  // Filter electoral lists using the same criteria as CandidateListManager
+  const electoralLists = candidates.filter(c => 
+    c.type === 'list' || 
+    (c.type === 'candidate' && c.listName) ||
+    c.listName ||
+    c.presidentName ||
+    c.vicePresidentName
+  ) || [];
   
-  const totalVotesPresident = presidentCandidates.reduce((sum, c) => sum + (c.votos || 0), 0);
-  const totalVotesVicepresident = vicepresidentCandidates.reduce((sum, c) => sum + (c.votos || 0), 0);
+  // Calculate votes per list from actual votes database
+  const votesByList = {};
+  votes.forEach(vote => {
+    const listId = vote.listId || vote.candidateId;
+    if (listId) {
+      votesByList[listId] = (votesByList[listId] || 0) + 1;
+    }
+  });
+  
+  // Add vote counts to electoral lists
+  const listsWithVotes = electoralLists.map(list => ({
+    ...list,
+    votos: votesByList[list._id] || votesByList[list.id] || 0
+  }));
+  
+  // Calculate total votes for all lists
+  const totalVotes = Object.values(votesByList).reduce((sum, count) => sum + count, 0);
+  
+  console.log('📊 ResultsCharts: Vote calculation:', {
+    totalVotesInDB: votes.length,
+    votesByList,
+    listsWithVotes: listsWithVotes.map(l => ({ name: l.listName, votes: l.votos })),
+    totalVotes
+  });
 
-  if (candidates.length === 0) {
+  if (electoralLists.length === 0) {
     return (
       <div className="results-charts">
         <div className="no-data-message">
-          <p>🏆 No hay candidatos registrados.</p>
-          <p>Los resultados se mostrarán cuando se registren candidatos.</p>
+          <p>🏆 No hay listas electorales registradas.</p>
+          <p>Los resultados se mostrarán cuando se registren listas electorales.</p>
         </div>
       </div>
     );
@@ -462,18 +837,19 @@ function ResultsCharts() {
 
   return (
     <div className="results-charts">
-      {/* Presidente */}
+      {/* Listas Electorales */}
       <div className="chart-container">
-        <h3>PRESIDENTE ESTUDIANTIL</h3>
+        <h3>RESULTADOS POR LISTA ELECTORAL</h3>
         <div className="results-bars">
-          {presidentCandidates.map(candidate => {
-            const votes = candidate.votos || 0;
-            const percentage = totalVotesPresident > 0 ? ((votes / totalVotesPresident) * 100).toFixed(1) : '0.0';
+          {listsWithVotes.map(list => {
+            const votes = list.votos || 0;
+            const percentage = totalVotes > 0 ? ((votes / totalVotes) * 100).toFixed(1) : '0.0';
+            const listId = list._id || list.id || `list_${Date.now()}`;
             return (
-              <div key={candidate.id} className="result-bar">
+              <div key={listId} className="result-bar">
                 <div className="candidate-info">
-                  <span className="candidate-color" style={{backgroundColor: candidate.color}}></span>
-                  <span className="candidate-name">{candidate.nombre} ({candidate.lista})</span>
+                  <span className="candidate-color" style={{backgroundColor: list.color || '#007bff'}}></span>
+                  <span className="candidate-name">{list.listName || 'Lista Sin Nombre'}</span>
                   <span className="votes-count">{votes} votos ({percentage}%)</span>
                 </div>
                 <div className="progress-bar">
@@ -481,43 +857,48 @@ function ResultsCharts() {
                     className="progress-fill" 
                     style={{
                       width: `${percentage}%`,
-                      backgroundColor: candidate.color
+                      backgroundColor: list.color || '#007bff'
                     }}
                   ></div>
+                </div>
+                <div className="list-candidates">
+                  <small>👑 {list.presidentName || 'Sin presidente'} | 🤝 {list.vicePresidentName || 'Sin vicepresidente'}</small>
                 </div>
               </div>
             );
           })}
         </div>
+        <div className="total-votes">Total: {totalVotes} votos</div>
       </div>
 
-      {/* Vicepresidente */}
+      {/* Gráfico circular de resultados */}
       <div className="chart-container">
-        <h3>VICEPRESIDENTE ESTUDIANTIL</h3>
-        <div className="results-bars">
-          {vicepresidentCandidates.map(candidate => {
-            const votes = candidate.votos || 0;
-            const percentage = totalVotesVicepresident > 0 ? ((votes / totalVotesVicepresident) * 100).toFixed(1) : '0.0';
-            return (
-              <div key={candidate.id} className="result-bar">
-                <div className="candidate-info">
-                  <span className="candidate-color" style={{backgroundColor: candidate.color}}></span>
-                  <span className="candidate-name">{candidate.nombre} ({candidate.lista})</span>
-                  <span className="votes-count">{votes} votos ({percentage}%)</span>
-                </div>
-                <div className="progress-bar">
-                  <div 
-                    className="progress-fill" 
-                    style={{
-                      width: `${percentage}%`,
-                      backgroundColor: candidate.color
-                    }}
-                  ></div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <h3>DISTRIBUCIÓN DE VOTOS</h3>
+        {totalVotes > 0 ? (
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={listsWithVotes.map(list => ({
+                  name: list.listName || 'Lista Sin Nombre',
+                  value: list.votos || 0,
+                  fill: list.color || '#007bff'
+                }))}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({name, percent}) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              />
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="no-votes-message">
+            <p>📊 No hay votos registrados aún.</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -557,6 +938,113 @@ function ParticipationStats() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// Componente de estadísticas de participación por curso
+function ParticipationByCourseStats() {
+  const { participationByCourse } = useContext(AdminContext);
+  
+  if (!participationByCourse || participationByCourse.length === 0) {
+    return (
+      <div className="participation-stats">
+        <div className="no-data-message">
+          <p>🎓 No hay datos de participación por curso disponibles.</p>
+          <p>Los datos se mostrarán cuando haya estudiantes registrados con cursos asignados.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Group courses by nivel for better organization
+  const coursesByLevel = participationByCourse.reduce((acc, course) => {
+    const nivel = course.nivel || 'Sin nivel';
+    if (!acc[nivel]) {
+      acc[nivel] = [];
+    }
+    acc[nivel].push(course);
+    return acc;
+  }, {});
+
+  const nivelDisplayNames = {
+    'BASICA_ELEMENTAL': '📖 Básica Elemental',
+    'BASICA_MEDIA': '📓 Básica Media',
+    'BASICA_SUPERIOR': '📔 Básica Superior',
+    'BACHILLERATO': '🎓 Bachillerato',
+    'Sin nivel': '❓ Sin nivel'
+  };
+  
+  return (
+    <div className="participation-by-course-stats">
+      {Object.entries(coursesByLevel).map(([nivel, courses]) => (
+        <div key={nivel} className="course-level-group">
+          <h4 className="level-header">{nivelDisplayNames[nivel] || nivel}</h4>
+          <div className="course-stats-grid">
+            {courses.map(course => (
+              <div key={course.course} className="course-participation-card">
+                <div className="course-header">
+                  <h5 className="course-name" title={`Curso: ${course.course}`}>
+                    {course.course}
+                  </h5>
+                  <div className="course-numbers">
+                    <span className="voted">{course.voted}</span>
+                    <span className="separator">/</span>
+                    <span className="total">{course.total}</span>
+                  </div>
+                </div>
+                <div className="course-percentage">
+                  <span className="percentage-text">{course.percentage}%</span>
+                </div>
+                <div className="course-participation-bar">
+                  <div 
+                    className="course-participation-fill"
+                    style={{
+                      width: `${course.percentage}%`,
+                      backgroundColor: course.percentage >= 80 ? '#28a745' : 
+                                      course.percentage >= 60 ? '#ffc107' : 
+                                      course.percentage >= 40 ? '#fd7e14' : '#dc3545'
+                    }}
+                  ></div>
+                </div>
+                <div className="course-status">
+                  {course.percentage >= 80 && <span className="status-excellent">🟢 Excelente</span>}
+                  {course.percentage >= 60 && course.percentage < 80 && <span className="status-good">🟡 Buena</span>}
+                  {course.percentage >= 40 && course.percentage < 60 && <span className="status-regular">🟠 Regular</span>}
+                  {course.percentage < 40 && <span className="status-low">🔴 Baja</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+      
+      {/* Summary statistics */}
+      <div className="course-summary">
+        <h5>📊 Resumen por Cursos</h5>
+        <div className="summary-items">
+          <div className="summary-item">
+            <span className="summary-label">Total Cursos:</span>
+            <span className="summary-value">{participationByCourse.length}</span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-label">Participación Promedio:</span>
+            <span className="summary-value">
+              {participationByCourse.length > 0 ? 
+                Math.round(participationByCourse.reduce((sum, course) => sum + course.percentage, 0) / participationByCourse.length * 10) / 10 
+                : 0}%
+            </span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-label">Mejor Curso:</span>
+            <span className="summary-value">
+              {participationByCourse.length > 0 ? 
+                participationByCourse.reduce((best, course) => course.percentage > best.percentage ? course : best).course
+                : 'N/A'}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -725,111 +1213,6 @@ function CandidateForm({ candidate, onSave, onCancel }) {
   );
 }
 
-// Tab de reportes
-function ReportsTab() {
-  const { candidates, stats } = useContext(AdminContext);
-
-  const generatePDFReport = () => {
-    alert('Generando reporte PDF... (Función en desarrollo)');
-  };
-
-  const generateExcelReport = () => {
-    alert('Generando reporte Excel... (Función en desarrollo)');
-  };
-
-  const generateCSVReport = () => {
-    const csvData = candidates.map(c => ({
-      Candidato: c.nombre,
-      Cargo: c.cargo,
-      Lista: c.lista,
-      Votos: c.votos
-    }));
-    
-    const csvContent = [
-      Object.keys(csvData[0]).join(','),
-      ...csvData.map(row => Object.values(row).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'resultados_elecciones.csv';
-    a.click();
-  };
-
-  return (
-    <div className="reports-tab">
-      <h2>📋 REPORTES Y EXPORTACIÓN</h2>
-      
-      <div className="reports-grid">
-        <div className="report-card">
-          <h3>📊 Resultados Consolidados</h3>
-          <p>Reporte completo con resultados por cargo y estadísticas</p>
-          <div className="report-actions">
-            <button onClick={generatePDFReport} className="btn-pdf">
-              📄 PDF
-            </button>
-            <button onClick={generateExcelReport} className="btn-excel">
-              📊 Excel
-            </button>
-            <button onClick={generateCSVReport} className="btn-csv">
-              📝 CSV
-            </button>
-          </div>
-        </div>
-
-        <div className="report-card">
-          <h3>👥 Lista de Sufragantes</h3>
-          <p>Estudiantes que participaron en la votación</p>
-          <div className="report-actions">
-            <button className="btn-pdf">📄 PDF</button>
-            <button className="btn-excel">📊 Excel</button>
-          </div>
-        </div>
-
-        <div className="report-card">
-          <h3>📈 Estadísticas de Participación</h3>
-          <p>Análisis detallado por curso y nivel</p>
-          <div className="report-actions">
-            <button className="btn-pdf">📄 PDF</button>
-            <button className="btn-excel">📊 Excel</button>
-          </div>
-        </div>
-
-        <div className="report-card">
-          <h3>📋 Acta Oficial</h3>
-          <p>Documento oficial de resultados electorales</p>
-          <div className="report-actions">
-            <button className="btn-pdf">📄 PDF</button>
-          </div>
-        </div>
-      </div>
-
-      <div className="quick-stats">
-        <h3>📊 Estadísticas Rápidas</h3>
-        <div className="stats-grid">
-          <div className="stat-item">
-            <span className="stat-label">Total de Votos:</span>
-            <span className="stat-value">{candidates.reduce((sum, c) => sum + (c.votos || 0), 0)}</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">Participación:</span>
-            <span className="stat-value">{stats.totalStudents > 0 ? ((stats.studentsVoted / stats.totalStudents) * 100).toFixed(1) : '0.0'}%</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">Candidatos:</span>
-            <span className="stat-value">{candidates.length}</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">Cursos Activos:</span>
-            <span className="stat-value">{stats.activeCourses}/{stats.totalCourses}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // Tab de configuración
 function ConfigTab() {
@@ -844,9 +1227,10 @@ function ConfigTab() {
 ¿Está completamente seguro de que desea iniciar una nueva elección?
 
 Esta acción:
-• Eliminará TODOS los estudiantes actuales
+• CONSERVARÁ todos los estudiantes importados
 • Eliminará TODOS los votos registrados
-• Eliminará TODOS los candidatos
+• Reiniciará TODOS los estados de votación de estudiantes
+• Eliminará TODOS los candidatos/listas electorales
 • Eliminará TODOS los códigos de activación
 • Reiniciará todas las estadísticas
 • NO se puede deshacer
@@ -861,7 +1245,7 @@ Escriba "CONFIRMAR" para proceder:`;
       setSuccess(null);
       
       try {
-        console.log('🗑️ Iniciando limpieza completa para nueva elección...');
+        console.log('🗑️ Iniciando limpieza para nueva elección (conservando estudiantes)...');
         
         // Step 0: Clear activation codes using dedicated service
         console.log('🔑 Eliminando códigos de activación...');
@@ -872,8 +1256,37 @@ Escriba "CONFIRMAR" para proceder:`;
           console.warn('⚠️ Error eliminando códigos:', codesResult.error);
         }
         
-        // Step 1: Clear all other database collections
-        const collections = ['students', 'candidates', 'votes', 'sessions'];
+        // Step 1: Reset student voting states (preserve students, reset states)
+        console.log('🔄 Reiniciando estados de votación de estudiantes...');
+        try {
+          // Get all students to reset their voting status
+          const studentsResult = await databaseService.findDocuments('students', {
+            selector: { type: 'student' }
+          });
+          
+          if (studentsResult.docs && studentsResult.docs.length > 0) {
+            console.log(`🔄 Reiniciando ${studentsResult.docs.length} estudiantes...`);
+            
+            const resetPromises = studentsResult.docs.map(async (student) => {
+              const resetStudent = {
+                ...student,
+                votado: false,
+                absent: false,
+                votedAt: null,
+                absentAt: null
+              };
+              return databaseService.updateDocument('students', resetStudent);
+            });
+            
+            await Promise.all(resetPromises);
+            console.log(`✅ Estados reiniciados para ${studentsResult.docs.length} estudiantes`);
+          }
+        } catch (error) {
+          console.error('Error reiniciando estados de estudiantes:', error);
+        }
+        
+        // Step 2: Clear only votes, candidates, and sessions (preserve students)
+        const collections = ['candidates', 'votes', 'sessions'];
         let totalDeleted = codesResult.deleted || 0;
         
         for (const collection of collections) {
@@ -921,21 +1334,29 @@ Escriba "CONFIRMAR" para proceder:`;
           }
         });
         
-        // Step 4: Reset local state
-        setStudents([]);
+        // Step 4: Reset local state (only clear candidates, keep students)
         setCandidates([]);
         
         const codesDeleted = codesResult.deleted || 0;
         const otherDeleted = totalDeleted - codesDeleted;
         
+        // Get student count for success message
+        const studentsResult = await databaseService.findDocuments('students', {
+          selector: { type: 'student' }
+        });
+        const studentCount = studentsResult.docs ? studentsResult.docs.length : 0;
+        
         setSuccess(`✅ Nueva elección iniciada exitosamente. 
-        
-Eliminados:
+
+CONSERVADOS:
+• ${studentCount} estudiantes (estados reiniciados)
+
+ELIMINADOS:
 • ${codesDeleted} códigos de activación
-• ${otherDeleted} registros de datos
-• Total: ${totalDeleted} registros`);
+• ${otherDeleted} votos, candidatos y sesiones
+• Total eliminados: ${totalDeleted} registros`);
         
-        console.log(`✅ Nueva elección completada. Códigos: ${codesDeleted}, Otros: ${otherDeleted}, Total: ${totalDeleted}`);
+        console.log(`✅ Nueva elección completada. Estudiantes conservados: ${studentCount}, Eliminados - Códigos: ${codesDeleted}, Otros: ${otherDeleted}`);
         
       } catch (error) {
         console.error('❌ Error al iniciar nueva elección:', error);

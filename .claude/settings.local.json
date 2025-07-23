@@ -11,7 +11,8 @@
       "Bash(wc:*)",
       "Bash(du:*)",
       "Bash(npm install:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": []
   }
